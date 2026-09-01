@@ -4,10 +4,13 @@ on:
   push:
     branches: [ main, master ]
     tags:
-      - 'v*'           # triggers on v1.0, v1.0.1, etc.
+      - 'v*'
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:   # allows manual run from GitHub UI
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -44,7 +47,7 @@ jobs:
       - name: Rename APK with version
         run: |
           VERSION="${{ github.ref_name }}"
-          if [[ "$VERSION" == refs/* ]]; then VERSION="dev"; fi
+          if [[ "$VERSION" == refs/* ]] || [[ -z "$VERSION" ]]; then VERSION="v1.0"; fi
           cp app/build/outputs/apk/debug/app-debug.apk \
              app/build/outputs/apk/debug/MatrixLauncher-${VERSION}-debug.apk
 
@@ -55,31 +58,30 @@ jobs:
           path: app/build/outputs/apk/debug/MatrixLauncher-*-debug.apk
           retention-days: 30
 
-      # Only runs when you push a tag like v1.0
-      - name: Create GitHub Release with APK
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref_name == 'main'
         with:
-          name: "MatrixLauncher ${{ github.ref_name }}"
+          tag_name: "v1.0"
+          name: "MatrixLauncher v1.0 — Test Build"
           body: |
-            ## MatrixLauncher ${{ github.ref_name }} — Test Build
+            ## 📱 MatrixLauncher v1.0 — Test APK
 
-            ### How to install
-            1. Download the `.apk` file below.
-            2. Transfer it to your Android phone.
-            3. On your phone, tap the file and allow **"Install from unknown sources"**.
-            4. Done! MatrixLauncher is installed.
+            ### How to install on your phone:
+            1. Tap the **`MatrixLauncher-v1.0-debug.apk`** link below to download.
+            2. When downloaded, tap **Install** (if prompted, allow *"Install unknown apps"* for your browser).
+            3. Open MatrixLauncher and enjoy!
 
-            ### What's inside
-            - Retro dot-matrix LED home screen
-            - Universal search + in-line calculator
-            - Dynamic app shortcuts on long-press
-            - Weather & calendar glance
-            - CRT scanline shader (Android 13+)
-            - Mindful pause, scratchpad, hidden apps
+            ### Included Features:
+            - ⏱️ Retro 5×7 LED dot-matrix clock + battery bar
+            - 🔍 Universal search with in-line calculator (`45 * 12`)
+            - ⚡ System settings deep-links (`wifi`, `battery`, `bluetooth`)
+            - 📌 Dynamic app shortcuts & context menu on long-press
+            - 🌤️ Weather & calendar glance
+            - 📳 Haptic tactile vibration
+            - ⚙️ CRT scanline shaders & custom theme colors
           files: app/build/outputs/apk/debug/MatrixLauncher-*-debug.apk
           draft: false
-          prerelease: true
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
