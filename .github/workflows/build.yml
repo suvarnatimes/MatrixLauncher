@@ -45,11 +45,15 @@ jobs:
           ANDROID_HOME: /usr/local/lib/android/sdk
 
       - name: Rename APK with version
+        id: vars
         run: |
-          VERSION="${{ github.ref_name }}"
-          if [[ "$VERSION" == refs/* ]] || [[ -z "$VERSION" ]]; then VERSION="v1.0"; fi
+          TAG="${{ github.ref_name }}"
+          if [[ -z "$TAG" ]] || [[ "$TAG" == "main" ]] || [[ "$TAG" == "master" ]]; then
+            TAG="v1.1"
+          fi
+          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
           cp app/build/outputs/apk/debug/app-debug.apk \
-             app/build/outputs/apk/debug/MatrixLauncher-${VERSION}-debug.apk
+             app/build/outputs/apk/debug/MatrixLauncher-${TAG}-debug.apk
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
@@ -62,24 +66,30 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref_name == 'main'
         with:
-          tag_name: "v1.0"
-          name: "MatrixLauncher v1.0 — Test Build"
+          tag_name: ${{ steps.vars.outputs.tag_name }}
+          name: "MatrixLauncher ${{ steps.vars.outputs.tag_name }} — Test Build"
           body: |
-            ## 📱 MatrixLauncher v1.0 — Test APK
+            ## 📱 MatrixLauncher ${{ steps.vars.outputs.tag_name }} — Test APK
 
             ### How to install on your phone:
-            1. Tap the **`MatrixLauncher-v1.0-debug.apk`** link below to download.
+            1. Tap the **`MatrixLauncher-${{ steps.vars.outputs.tag_name }}-debug.apk`** link below to download.
             2. When downloaded, tap **Install** (if prompted, allow *"Install unknown apps"* for your browser).
-            3. Open MatrixLauncher and enjoy!
+            3. Open MatrixLauncher and set as default!
 
-            ### Included Features:
-            - ⏱️ Retro 5×7 LED dot-matrix clock + battery bar
-            - 🔍 Universal search with in-line calculator (`45 * 12`)
-            - ⚡ System settings deep-links (`wifi`, `battery`, `bluetooth`)
-            - 📌 Dynamic app shortcuts & context menu on long-press
-            - 🌤️ Weather & calendar glance
-            - 📳 Haptic tactile vibration
-            - ⚙️ CRT scanline shaders & custom theme colors
+            ### Included Features in this Release:
+            - 🛡️ **Startup Crash Fixes**: Resolved Android 14+ `registerReceiver` crash & added robust package queries.
+            - 🧩 **Trendy Dot-Matrix Widgets Module**:
+              - 5×7 LED Digital Clock & Date
+              - Real-time Weather & Humidity LED widget
+              - Hardware Telemetry (Storage, RAM, Battery % dots)
+              - Quick Scratchpad sticky note
+              - Calendar agenda banner
+            - 🎨 **Automatic Stock App Dot-Matrix Icon Engine**:
+              - 17 procedural 12×12 pixel icons for stock apps (Camera, Calculator, Clock, Dialer, Messages, Settings, Photos, Browser, Music, Calendar, Contacts, Files, Maps, Mail, Notes, Recorder, Store).
+            - 🖌️ **Icon Customization Studio & PNG Image Upload**:
+              - Edit any app icon: pick glyphs, change LED glow color, change dot shape.
+              - **Upload custom PNG/JPEG** image from your phone's gallery!
+            - 🏠 **Default Launcher Toggle & Banner**: 1-tap button to set/unset MatrixLauncher as default.
           files: app/build/outputs/apk/debug/MatrixLauncher-*-debug.apk
           draft: false
           prerelease: false

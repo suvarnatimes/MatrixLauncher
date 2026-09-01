@@ -11,13 +11,13 @@ import com.matrixlauncher.domain.model.WebSearchProvider
 import org.json.JSONArray
 import org.json.JSONObject
 
-object ConfigBackupHelper {
+data class BackupData(
+    val settings: LauncherSettings,
+    val customLabels: Map<String, String>,
+    val hiddenPackages: Set<String>
+)
 
-    data class BackupData(
-        val settings: LauncherSettings,
-        val customLabels: Map<String, String>,
-        val hiddenPackages: Set<String>
-    )
+object ConfigBackupHelper {
 
     fun exportToJson(
         settings: LauncherSettings,
@@ -25,8 +25,6 @@ object ConfigBackupHelper {
         hiddenPackages: Set<String>
     ): String {
         val root = JSONObject()
-        root.put("version", 1)
-        root.put("exportTime", System.currentTimeMillis())
 
         val sObj = JSONObject().apply {
             put("accentColor", settings.accentColor.name)
@@ -57,7 +55,9 @@ object ConfigBackupHelper {
         root.put("settings", sObj)
 
         val labelsObj = JSONObject()
-        customLabels.forEach { (pkg, label) -> labelsObj.put(pkg, label) }
+        customLabels.forEach { (pkg, label) ->
+            labelsObj.put(pkg, label)
+        }
         root.put("customLabels", labelsObj)
 
         val hiddenArray = JSONArray()
@@ -80,16 +80,25 @@ object ConfigBackupHelper {
                 }
             }
 
+            val accent = try { AccentColor.valueOf(sObj.optString("accentColor")) } catch (e: Exception) { AccentColor.CRIMSON }
+            val density = try { DotDensity.valueOf(sObj.optString("dotDensity")) } catch (e: Exception) { DotDensity.STANDARD }
+            val shape = try { DotShape.valueOf(sObj.optString("dotShape")) } catch (e: Exception) { DotShape.CIRCLE }
+            val scroller = try { ScrollerAlignment.valueOf(sObj.optString("scrollerAlignment")) } catch (e: Exception) { ScrollerAlignment.RIGHT }
+            val doubleTap = try { DoubleTapAction.valueOf(sObj.optString("doubleTapAction")) } catch (e: Exception) { DoubleTapAction.TOGGLE_TORCH }
+            val swipeLeft = try { SwipeGestureAction.valueOf(sObj.optString("swipeLeftAction")) } catch (e: Exception) { SwipeGestureAction.NONE }
+            val swipeRight = try { SwipeGestureAction.valueOf(sObj.optString("swipeRightAction")) } catch (e: Exception) { SwipeGestureAction.NONE }
+            val provider = try { WebSearchProvider.valueOf(sObj.optString("defaultSearchProvider")) } catch (e: Exception) { WebSearchProvider.DUCK_DUCK_GO }
+
             val settings = LauncherSettings(
-                accentColor = AccentColor.fromName(sObj.optString("accentColor")),
+                accentColor = accent,
                 customAccentHex = sObj.optString("customAccentHex", "#FF2E2E"),
-                dotDensity = DotDensity.fromName(sObj.optString("dotDensity")),
-                dotShape = DotShape.fromName(sObj.optString("dotShape")),
-                scrollerAlignment = ScrollerAlignment.fromName(sObj.optString("scrollerAlignment")),
-                doubleTapAction = DoubleTapAction.fromName(sObj.optString("doubleTapAction")),
-                swipeLeftAction = SwipeGestureAction.fromName(sObj.optString("swipeLeftAction")),
-                swipeRightAction = SwipeGestureAction.fromName(sObj.optString("swipeRightAction")),
-                defaultSearchProvider = WebSearchProvider.fromName(sObj.optString("defaultSearchProvider")),
+                dotDensity = density,
+                dotShape = shape,
+                scrollerAlignment = scroller,
+                doubleTapAction = doubleTap,
+                swipeLeftAction = swipeLeft,
+                swipeRightAction = swipeRight,
+                defaultSearchProvider = provider,
                 is24HourClock = sObj.optBoolean("is24HourClock", true),
                 showScreenTimeGlance = sObj.optBoolean("showScreenTimeGlance", true),
                 showBatteryDotBar = sObj.optBoolean("showBatteryDotBar", true),

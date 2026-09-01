@@ -9,7 +9,7 @@ object DotMatrixFont {
     const val GLYPH_WIDTH = 5
     const val GLYPH_HEIGHT = 7
 
-    private val GLYPHS = mapOf(
+    val GLYPHS = mapOf(
         // Digits 0-9
         '0' to intArrayOf(
             0b01110,

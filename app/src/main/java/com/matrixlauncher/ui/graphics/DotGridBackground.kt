@@ -200,7 +200,7 @@ private fun DrawScope.drawGridDots(
                         size = Size(squareSide, squareSide)
                     )
                 }
-                DotShape.ROUNDED_SQUARE -> {
+                DotShape.ROUNDED_CRT -> {
                     drawRoundRect(
                         color = dotColor,
                         topLeft = Offset(cx - radiusPx, cy - radiusPx),
