@@ -100,7 +100,10 @@ fun SettingsScreen(
     onDotDensityChange: (DotDensity) -> Unit,
     onDotShapeChange: (DotShape) -> Unit,
     onIconStyleChange: (IconStyle) -> Unit,
-    onEnabledWidgetsChange: (List<HomeWidgetType>) -> Unit,
+    onCustomUserNameChange: (String) -> Unit = {},
+    onNameStyleChange: (Int) -> Unit = {},
+    onCrossStyleChange: (Int) -> Unit = {},
+    onClockStyleChange: (Int) -> Unit = {},
     onOpenIconStudio: () -> Unit,
     onScrollerAlignmentChange: (ScrollerAlignment) -> Unit,
     onUpdateGestureAction: (gestureKey: String, actionString: String) -> Unit,
@@ -126,9 +129,8 @@ fun SettingsScreen(
     var showImportDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
     var exportedJsonText by remember { mutableStateOf("") }
-
-    // App Picker Dialog for Gestures
     var gestureKeyForAppPick by remember { mutableStateOf<String?>(null) }
+    var nameInputState by remember(settings.customUserName) { mutableStateOf(settings.customUserName) }
 
     Box(
         modifier = modifier
@@ -141,7 +143,7 @@ fun SettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBackClick) {
@@ -151,34 +153,31 @@ fun SettingsScreen(
                         tint = TextPrimary
                     )
                 }
+
                 Text(
-                    text = "MATRIX SETTINGS",
+                    text = "SETTINGS // MATRIX OS",
                     color = TextPrimary,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.5.sp
+                    letterSpacing = 1.2.sp
                 )
             }
 
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Section 0: DEFAULT LAUNCHER STATUS & TOGGLE
+                // Section 0: Default Home App Action Card
                 item {
-                    SettingsSectionHeader(title = "DEFAULT HOME LAUNCHER")
-                    Spacer(modifier = Modifier.height(8.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(DarkSurface, RoundedCornerShape(6.dp))
-                            .border(
-                                1.dp,
-                                if (isDefaultLauncher) accent.primaryColor else AccentColor.CRIMSON.primaryColor,
-                                RoundedCornerShape(6.dp)
-                            )
+                            .background(SurfaceCard, RoundedCornerShape(6.dp))
+                            .border(1.dp, if (isDefaultLauncher) accent.primaryColor else AccentColor.CRIMSON.primaryColor, RoundedCornerShape(6.dp))
                             .clickable(onClick = onSetDefaultLauncher)
                             .padding(14.dp)
                     ) {
@@ -222,7 +221,99 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section 1: ICON STUDIO & ICON STYLES
+                // Section 1: HERO BANNER, CUSTOM NAME & WIDGET STYLES
+                item {
+                    SettingsSectionHeader(title = "HERO BANNER & WIDGET STYLES")
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Custom Name Input
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(SurfaceCard, RoundedCornerShape(6.dp))
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            text = "CUSTOM USER NAME",
+                            color = TextPrimary,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Displays large in the center of the Hero Date+Name+Time widget and standalone Name widgets",
+                            color = TextSecondary,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            BasicTextField(
+                                value = nameInputState,
+                                onValueChange = { nameInputState = it },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .background(DarkSurface, RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                textStyle = TextStyle(
+                                    color = TextPrimary,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                cursorBrush = SolidColor(accent.primaryColor),
+                                singleLine = true
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = { onCustomUserNameChange(nameInputState.trim()) },
+                                colors = ButtonDefaults.buttonColors(containerColor = accent.primaryColor, contentColor = Black),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "SAVE",
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Jesus Cross Style Selector (3 styles)
+                    SettingsStyleSelector(
+                        title = "JESUS CROSS DESIGN",
+                        description = "Pick your preferred dot-matrix cross art",
+                        options = listOf("DOUBLE-BORDER OUTLINE", "TRIPLE GOLGOTHA", "RADIANT CELTIC"),
+                        selectedIndex = settings.crossStyleIndex % 3,
+                        onSelect = onCrossStyleChange
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Standalone Name Design (3 styles)
+                    SettingsStyleSelector(
+                        title = "STANDALONE NAME DESIGN",
+                        description = "Style for standalone big name widget",
+                        options = listOf("BOLD MONOLITH", "FRAMED BADGE", "CYBER FLANKED"),
+                        selectedIndex = settings.nameStyleIndex % 3,
+                        onSelect = onNameStyleChange
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Standalone Clock Design (3 styles)
+                    SettingsStyleSelector(
+                        title = "CLOCK WIDGET DESIGN",
+                        description = "Layout for standalone clock widget",
+                        options = listOf("CLASSIC DIGITAL", "STACKED 2-LINE", "COMPACT RETRO"),
+                        selectedIndex = settings.clockStyleIndex % 3,
+                        onSelect = onClockStyleChange
+                    )
+                }
+
+                // Section 2: ICON STUDIO & ICON STYLES
                 item {
                     SettingsSectionHeader(title = "APP ICONS & ICON STUDIO")
                     Spacer(modifier = Modifier.height(10.dp))
@@ -324,7 +415,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section 2: GESTURES & MULTI-TOUCH CONTROLS (With App Binding)
+                // Section 3: GESTURES & MULTI-TOUCH CONTROLS
                 item {
                     SettingsSectionHeader(title = "GESTURES & MULTI-TOUCH CONTROLS")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -409,30 +500,6 @@ fun SettingsScreen(
                     )
                 }
 
-                // Section 3: TRENDY DOT-MATRIX WIDGETS MANAGER
-                item {
-                    SettingsSectionHeader(title = "TRENDY DOT-MATRIX WIDGETS")
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    HomeWidgetType.entries.forEach { widget ->
-                        val isEnabled = settings.enabledWidgets.contains(widget)
-                        SettingsToggleRow(
-                            title = widget.title,
-                            subtitle = widget.description,
-                            checked = isEnabled,
-                            onCheckedChange = { checked ->
-                                val current = settings.enabledWidgets.toMutableList()
-                                if (checked) {
-                                    if (!current.contains(widget)) current.add(widget)
-                                } else {
-                                    current.remove(widget)
-                                }
-                                onEnabledWidgetsChange(current)
-                            }
-                        )
-                    }
-                }
-
                 // Section 4: THEME & COLOR PALETTE
                 item {
                     SettingsSectionHeader(title = "LED ACCENT COLOR")
@@ -460,7 +527,7 @@ fun SettingsScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(
                                         modifier = Modifier
-                                            .size(12.dp)
+                                            .size(14.dp)
                                             .background(colorOption.primaryColor, CircleShape)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -477,120 +544,128 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section 5: DOT MATRIX GRID & SHAPES
+                // Section 5: DOT GRID MATRIX CALIBRATION
                 item {
-                    SettingsSectionHeader(title = "DOT MATRIX GRID")
+                    SettingsSectionHeader(title = "BACKGROUND DOT GRID MATRIX")
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(text = "DOT SHAPE", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
+                    Text(
+                        text = "DOT DENSITY",
+                        color = TextPrimary,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        DotShape.entries.forEach { shape ->
+                        items(DotDensity.entries) { density ->
+                            val isSelected = settings.dotDensity == density
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        if (isSelected) accent.primaryColor.copy(alpha = 0.25f) else DarkSurface,
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .border(1.dp, if (isSelected) accent.primaryColor else DividerColor, RoundedCornerShape(4.dp))
+                                    .clickable { onDotDensityChange(density) }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = density.label,
+                                    color = if (isSelected) accent.primaryColor else TextPrimary,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "DOT SHAPE",
+                        color = TextPrimary,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(DotShape.entries) { shape ->
                             val isSelected = settings.dotShape == shape
                             Box(
                                 modifier = Modifier
-                                    .weight(1f)
                                     .background(
-                                        if (isSelected) accent.primaryColor.copy(alpha = 0.2f) else DarkSurface,
+                                        if (isSelected) accent.primaryColor.copy(alpha = 0.25f) else DarkSurface,
                                         RoundedCornerShape(4.dp)
                                     )
-                                    .border(
-                                        1.dp,
-                                        if (isSelected) accent.primaryColor else DividerColor,
-                                        RoundedCornerShape(4.dp)
-                                    )
+                                    .border(1.dp, if (isSelected) accent.primaryColor else DividerColor, RoundedCornerShape(4.dp))
                                     .clickable { onDotShapeChange(shape) }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
                             ) {
                                 Text(
                                     text = shape.label,
                                     color = if (isSelected) accent.primaryColor else TextPrimary,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    SettingsToggleRow(
-                        title = "AGSL HARDWARE SHADER",
-                        subtitle = "Hardware-accelerated CRT scanlines & breathing wave",
-                        checked = settings.agslShaderEnabled,
-                        onCheckedChange = onToggleShader
-                    )
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     SettingsToggleRow(
                         title = "RETRO CRT SCANLINES",
-                        subtitle = "Subtle cathode-ray tube horizontal scanlines",
+                        subtitle = "Subtle cathode ray tube scanlines on OLED grid",
                         checked = settings.enableCrtScanlines,
                         onCheckedChange = onToggleCrtScanlines
                     )
+
+                    SettingsToggleRow(
+                        title = "HARDWARE AGSL SHADER",
+                        subtitle = "Hardware-accelerated ambient pixel rendering",
+                        checked = settings.agslShaderEnabled,
+                        onCheckedChange = onToggleShader
+                    )
                 }
 
-                // Section 6: DIGITAL WELLBEING & PRIVACY
+                // Section 6: TIME & GENERAL SETTINGS
                 item {
-                    SettingsSectionHeader(title = "WELLBEING & PRIVACY")
+                    SettingsSectionHeader(title = "GENERAL PREFERENCES")
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = "MAX PINNED FAVORITES: ${settings.maxFavoritesCount}",
-                        color = TextPrimary,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp
-                    )
-                    Slider(
-                        value = settings.maxFavoritesCount.toFloat(),
-                        onValueChange = { onMaxFavoritesChange(it.toInt()) },
-                        valueRange = 1f..15f,
-                        steps = 13,
-                        colors = SliderDefaults.colors(
-                            thumbColor = accent.primaryColor,
-                            activeTrackColor = accent.primaryColor,
-                            inactiveTrackColor = DividerColor
-                        )
+                    SettingsToggleRow(
+                        title = "24-HOUR TIME FORMAT",
+                        subtitle = if (settings.is24HourClock) "24-hour military clock" else "12-hour AM/PM clock",
+                        checked = settings.is24HourClock,
+                        onCheckedChange = onToggle24Hour
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    SettingsToggleRow(
+                        title = "BATTERY DOT BAR",
+                        subtitle = "Segmented horizontal LED battery gauge",
+                        checked = settings.showBatteryDotBar,
+                        onCheckedChange = onToggleBatteryBar
+                    )
 
-                    // Hidden Apps Sheet Trigger
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(DarkSurface, RoundedCornerShape(4.dp))
-                            .border(1.dp, DividerColor, RoundedCornerShape(4.dp))
-                            .clickable { showHiddenAppsSheet = true }
-                            .padding(14.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "HIDDEN APPS (${hiddenApps.size})",
-                                color = TextPrimary,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = "MANAGE >",
-                                color = accent.primaryColor,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                    SettingsToggleRow(
+                        title = "AUTO-FOCUS SEARCH",
+                        subtitle = "Open keyboard automatically when entering drawer",
+                        checked = settings.autoFocusSearch,
+                        onCheckedChange = onToggleAutoFocusSearch
+                    )
                 }
 
-                // Section 7: CONFIG BACKUP & RESTORE
+                // Section 7: BACKUP & EXPORT/IMPORT
                 item {
                     SettingsSectionHeader(title = "BACKUP & RESTORE")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -608,51 +683,39 @@ fun SettingsScreen(
                                 )
                                 showExportDialog = true
                             },
-                            modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = TextPrimary),
-                            shape = RoundedCornerShape(4.dp)
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Icon(imageVector = Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Default.FileUpload, contentDescription = null, tint = accent.primaryColor, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "EXPORT", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                            Text(text = "EXPORT CONFIG", fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Button(
                             onClick = { showImportDialog = true },
-                            modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = TextPrimary),
-                            shape = RoundedCornerShape(4.dp)
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Icon(imageVector = Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Default.FileDownload, contentDescription = null, tint = accent.primaryColor, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "IMPORT", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                            Text(text = "IMPORT CONFIG", fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
-
-                item { Spacer(modifier = Modifier.height(24.dp)) }
             }
         }
 
-        // App Picker Bottom Sheet for Gestures
+        // App Picker Dialog for Gestures
         if (gestureKeyForAppPick != null) {
-            val targetKey = gestureKeyForAppPick!!
             AppPickerBottomSheet(
                 allApps = allApps,
                 onDismiss = { gestureKeyForAppPick = null },
                 onSelectApp = { app ->
-                    onUpdateGestureAction(targetKey, "APP:${app.packageName}")
+                    onUpdateGestureAction(gestureKeyForAppPick!!, "APP:${app.packageName}")
                     gestureKeyForAppPick = null
                 }
-            )
-        }
-
-        // Hidden Apps Modal Bottom Sheet
-        if (showHiddenAppsSheet) {
-            HiddenAppsSheet(
-                hiddenApps = hiddenApps,
-                onDismiss = { showHiddenAppsSheet = false },
-                onUnhideApp = onUnhideApp
             )
         }
 
@@ -661,21 +724,25 @@ fun SettingsScreen(
             AlertDialog(
                 onDismissRequest = { showExportDialog = false },
                 containerColor = DarkSurface,
-                title = { Text(text = "EXPORT CONFIGURATION", color = TextPrimary, fontFamily = FontFamily.Monospace) },
+                title = { Text(text = "BACKUP CONFIGURATION", color = TextPrimary, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
-                        Text(text = "JSON configuration string:", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                        Text(text = "Copy this JSON config to restore your layout & settings anytime:", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = exportedJsonText, color = OffWhite, fontFamily = FontFamily.Monospace, fontSize = 10.sp, maxLines = 8)
+                        BasicTextField(
+                            value = exportedJsonText,
+                            onValueChange = {},
+                            readOnly = true,
+                            modifier = Modifier.fillMaxWidth().background(SurfaceCard, RoundedCornerShape(4.dp)).padding(10.dp),
+                            textStyle = TextStyle(color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                        )
                     }
                 },
                 confirmButton = {
-                    TextButton(
-                        onClick = {
-                            clipboardManager.setText(AnnotatedString(exportedJsonText))
-                            showExportDialog = false
-                        }
-                    ) {
+                    TextButton(onClick = {
+                        clipboardManager.setText(AnnotatedString(exportedJsonText))
+                        showExportDialog = false
+                    }) {
                         Text(text = "COPY TO CLIPBOARD", color = accent.primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                     }
                 },
@@ -689,35 +756,31 @@ fun SettingsScreen(
 
         // Import Dialog
         if (showImportDialog) {
-            var importInputText by remember { mutableStateOf("") }
+            var importInput by remember { mutableStateOf("") }
             AlertDialog(
                 onDismissRequest = { showImportDialog = false },
                 containerColor = DarkSurface,
-                title = { Text(text = "IMPORT CONFIGURATION", color = TextPrimary, fontFamily = FontFamily.Monospace) },
+                title = { Text(text = "RESTORE CONFIGURATION", color = TextPrimary, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
-                        Text(text = "Paste JSON configuration string below:", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                        Text(text = "Paste your exported JSON config below:", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         BasicTextField(
-                            value = importInputText,
-                            onValueChange = { importInputText = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(120.dp)
-                                .background(SurfaceCard, RoundedCornerShape(4.dp))
-                                .padding(8.dp),
+                            value = importInput,
+                            onValueChange = { importInput = it },
+                            modifier = Modifier.fillMaxWidth().background(SurfaceCard, RoundedCornerShape(4.dp)).padding(10.dp),
                             textStyle = TextStyle(color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
                             cursorBrush = SolidColor(accent.primaryColor)
                         )
                     }
                 },
                 confirmButton = {
-                    TextButton(
-                        onClick = {
-                            onImportConfig(importInputText)
+                    TextButton(onClick = {
+                        if (importInput.isNotBlank()) {
+                            onImportConfig(importInput.trim())
                             showImportDialog = false
                         }
-                    ) {
+                    }) {
                         Text(text = "RESTORE", color = accent.primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                     }
                 },
@@ -728,6 +791,128 @@ fun SettingsScreen(
                 }
             )
         }
+    }
+}
+
+@Composable
+fun SettingsStyleSelector(
+    title: String,
+    description: String,
+    options: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit
+) {
+    val accent = LocalMatrixAccentColor.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceCard, RoundedCornerShape(6.dp))
+            .padding(12.dp)
+    ) {
+        Text(
+            text = title,
+            color = TextPrimary,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = description,
+            color = TextSecondary,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(options.indices.toList()) { index ->
+                val isSelected = selectedIndex == index
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (isSelected) accent.primaryColor.copy(alpha = 0.25f) else DarkSurface,
+                            RoundedCornerShape(4.dp)
+                        )
+                        .border(
+                            1.dp,
+                            if (isSelected) accent.primaryColor else DividerColor,
+                            RoundedCornerShape(4.dp)
+                        )
+                        .clickable { onSelect(index) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = options[index],
+                        color = if (isSelected) accent.primaryColor else TextPrimary,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSectionHeader(title: String) {
+    Text(
+        text = "// $title",
+        color = LocalMatrixAccentColor.current.primaryColor,
+        fontFamily = FontFamily.Monospace,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 1.2.sp,
+        modifier = Modifier.padding(top = 8.dp)
+    )
+}
+
+@Composable
+private fun SettingsToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val accent = LocalMatrixAccentColor.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = subtitle,
+                color = TextSecondary,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp
+            )
+        }
+
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Black,
+                checkedTrackColor = accent.primaryColor,
+                uncheckedThumbColor = TextSecondary,
+                uncheckedTrackColor = DarkSurface
+            )
+        )
     }
 }
 
@@ -743,81 +928,112 @@ private fun GestureRowItem(
     val accent = LocalMatrixAccentColor.current
     var expanded by remember { mutableStateOf(false) }
 
-    val presetOptions = listOf(
+    val builtInActions = listOf(
         "OPEN_DRAWER" to "OPEN ALL APPLICATIONS",
-        "OPEN_APP" to "LAUNCH SPECIFIC APP...",
         "EXPAND_NOTIFICATIONS" to "EXPAND NOTIFICATIONS",
-        "OPEN_SEARCH" to "OPEN SEARCH",
-        "OPEN_SETTINGS" to "OPEN SETTINGS",
+        "OPEN_SEARCH" to "OPEN QUICK SEARCH",
+        "OPEN_SETTINGS" to "OPEN LAUNCHER SETTINGS",
         "TOGGLE_TORCH" to "TOGGLE FLASHLIGHT",
         "OPEN_CAMERA" to "OPEN CAMERA",
         "LOCK_SCREEN" to "LOCK SCREEN",
         "NONE" to "DO NOTHING"
     )
 
-    val currentDisplay = when {
+    val currentDisplayLabel = when {
         currentAction.startsWith("APP:") -> {
             val pkg = currentAction.removePrefix("APP:")
             val app = allApps.firstOrNull { it.packageName == pkg }
-            "APP: ${app?.displayLabel?.uppercase() ?: pkg}"
+            "OPEN APP: ${app?.displayLabel?.uppercase() ?: pkg}"
         }
-        else -> presetOptions.firstOrNull { it.first == currentAction }?.second ?: currentAction
+        else -> builtInActions.firstOrNull { it.first == currentAction }?.second ?: currentAction
     }
 
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = gestureLabel, color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = gestureLabel,
+                color = TextPrimary,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = currentDisplayLabel,
+                color = accent.primaryColor,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp
+            )
+        }
+
+        Row {
+            // Pick App Button
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                     .background(DarkSurface, RoundedCornerShape(4.dp))
                     .border(1.dp, DividerColor, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .clickable(onClick = onPickApp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = currentDisplay, color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                }
+                Text(
+                    text = "SELECT APP",
+                    color = TextPrimary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
-            ExposedDropdownMenu(
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Built-in Actions Dropdown
+            ExposedDropdownMenuBox(
                 expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(DarkSurface)
+                onExpandedChange = { expanded = !expanded }
             ) {
-                presetOptions.forEach { (actionCode, label) ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = label,
-                                color = if (actionCode == "OPEN_APP") accent.primaryColor else TextPrimary,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 12.sp,
-                                fontWeight = if (actionCode == "OPEN_APP") FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            if (actionCode == "OPEN_APP") {
-                                onPickApp()
-                            } else {
-                                onActionChange(actionCode)
-                            }
-                        }
+                Box(
+                    modifier = Modifier
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                        .background(SurfaceCard, RoundedCornerShape(4.dp))
+                        .border(1.dp, DividerColor, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "ACTIONS ▼",
+                        color = TextSecondary,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
                     )
+                }
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(DarkSurface)
+                ) {
+                    builtInActions.forEach { (actionKey, label) ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = label,
+                                    color = if (currentAction == actionKey) accent.primaryColor else TextPrimary,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp
+                                )
+                            },
+                            onClick = {
+                                onActionChange(actionKey)
+                                expanded = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -826,14 +1042,13 @@ private fun GestureRowItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AppPickerBottomSheet(
+fun AppPickerBottomSheet(
     allApps: List<AppModel>,
     onDismiss: () -> Unit,
     onSelectApp: (AppModel) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
     var search by remember { mutableStateOf("") }
-
     val filtered = remember(allApps, search) {
         if (search.isBlank()) allApps
         else allApps.filter { it.displayLabel.contains(search, ignoreCase = true) }
@@ -847,135 +1062,50 @@ private fun AppPickerBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp, start = 20.dp, end = 20.dp)
+                .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            Text(text = "SELECT APP FOR GESTURE", color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = "ASSIGN APP TO GESTURE",
+                color = TextPrimary,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
             Spacer(modifier = Modifier.height(10.dp))
-
-            Box(
+            BasicTextField(
+                value = search,
+                onValueChange = { search = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(SurfaceCard, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .padding(10.dp),
+                textStyle = TextStyle(color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 13.sp),
+                cursorBrush = SolidColor(LocalMatrixAccentColor.current.primaryColor),
+                decorationBox = { inner ->
+                    if (search.isEmpty()) Text("Search app...", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                    inner()
+                }
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().height(350.dp)
             ) {
-                BasicTextField(
-                    value = search,
-                    onValueChange = { search = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 13.sp),
-                    decorationBox = { inner ->
-                        if (search.isEmpty()) Text(text = "Search apps...", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
-                        inner()
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            LazyColumn(modifier = Modifier.fillMaxWidth().height(350.dp)) {
-                items(filtered) { app ->
+                items(filtered, key = { it.packageName }) { app ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelectApp(app) }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        DotMatrixAppIcon(app = app, sizeDp = 22.dp)
+                        DotMatrixAppIcon(app = app, sizeDp = 24.dp)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(text = app.displayLabel.uppercase(), color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsSectionHeader(title: String) {
-    val accent = LocalMatrixAccentColor.current
-    Text(
-        text = "// $title",
-        color = accent.primaryColor,
-        fontFamily = FontFamily.Monospace,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 2.sp
-    )
-}
-
-@Composable
-private fun SettingsToggleRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    val accent = LocalMatrixAccentColor.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(text = subtitle, color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Black,
-                checkedTrackColor = accent.primaryColor,
-                uncheckedThumbColor = TextMuted,
-                uncheckedTrackColor = DarkSurface
-            )
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun HiddenAppsSheet(
-    hiddenApps: List<AppModel>,
-    onDismiss: () -> Unit,
-    onUnhideApp: (String) -> Unit
-) {
-    val accent = LocalMatrixAccentColor.current
-    val sheetState = rememberModalBottomSheetState()
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = DarkSurface
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp, start = 20.dp, end = 20.dp)
-        ) {
-            Text(text = "HIDDEN APPLICATIONS", color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(14.dp))
-
-            if (hiddenApps.isEmpty()) {
-                Text(text = "NO HIDDEN APPS", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    items(hiddenApps) { app ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(text = app.displayLabel.uppercase(), color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 14.sp)
-                            TextButton(onClick = { onUnhideApp(app.packageName) }) {
-                                Text(text = "UNHIDE", color = accent.primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                            }
-                        }
+                        Text(
+                            text = app.displayLabel.uppercase(),
+                            color = TextPrimary,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }

@@ -8,11 +8,12 @@ import com.matrixlauncher.ui.theme.AccentEmerald
 import com.matrixlauncher.ui.theme.AccentPurple
 import com.matrixlauncher.ui.theme.AccentRed
 import com.matrixlauncher.ui.theme.AccentWhite
+import java.util.UUID
 
 enum class AccentColor(val displayName: String, val primaryColor: Color) {
     CRIMSON("CRIMSON", AccentRed),
-    AMBER("AMBER", AccentAmber),
     EMERALD("EMERALD", AccentEmerald),
+    AMBER("AMBER", AccentAmber),
     CYAN("CYAN", AccentCyan),
     PURPLE("PURPLE", AccentPurple),
     WHITE("WHITE", AccentWhite),
@@ -39,9 +40,10 @@ enum class IconStyle(val label: String, val description: String) {
 }
 
 enum class HomeWidgetType(val title: String, val description: String) {
-    CLOCK("LED CLOCK & DATE", "5x7 dot-matrix clock with battery dot-bar"),
-    CUSTOM_NAME("CUSTOM NAME BANNER", "Large auto-scaling personalized dot-matrix name"),
-    JESUS_CROSS("JESUS CROSSES WIDGET", "Large centered LED dot-matrix cross art (3 styles)"),
+    COMBINED_HERO("HERO CLOCK & NAME", "Date + Big Name + Time + Battery (as in screenshot)"),
+    JESUS_CROSS("JESUS CROSS", "Double-bordered outline cross, triple crosses, or radiant Celtic cross"),
+    CUSTOM_NAME("STANDALONE BIG NAME", "3 styles: Bold Monolith, Framed Badge, or Cyber Flanked"),
+    CLOCK("STANDALONE CLOCK", "3 styles: Classic Digital, Stacked 2-Line, or Compact"),
     WEATHER("LIVE WEATHER GLANCE", "Current temperature, LED condition, and humidity"),
     TELEMETRY("DEVICE TELEMETRY", "Storage meter, RAM usage, and battery gauge"),
     SCRATCHPAD("QUICK SCRATCHPAD", "Interactive sticky note on your home screen"),
@@ -80,22 +82,49 @@ enum class WebSearchProvider(val label: String, val searchUrl: String) {
 }
 
 @Immutable
+data class PlacedWidget(
+    val id: String = UUID.randomUUID().toString(),
+    val type: HomeWidgetType,
+    val xPercent: Float = 0.5f,
+    val yPercent: Float = 0.5f,
+    val styleIndex: Int = 0
+)
+
+@Immutable
 data class LauncherSettings(
-    val accentColor: AccentColor = AccentColor.CRIMSON,
-    val customAccentHex: String = "#FF2E2E",
+    val accentColor: AccentColor = AccentColor.EMERALD,
+    val customAccentHex: String = "#00E676",
     val dotDensity: DotDensity = DotDensity.STANDARD,
     val dotShape: DotShape = DotShape.CIRCLE,
     val iconStyle: IconStyle = IconStyle.DOT_MATRIX_STOCK,
-    val enabledWidgets: List<HomeWidgetType> = listOf(
-        HomeWidgetType.CLOCK,
-        HomeWidgetType.CUSTOM_NAME,
-        HomeWidgetType.JESUS_CROSS,
-        HomeWidgetType.WEATHER
+
+    // Placed widgets with free-form position placement
+    val placedWidgets: List<PlacedWidget> = listOf(
+        PlacedWidget(
+            id = "hero_clock",
+            type = HomeWidgetType.COMBINED_HERO,
+            xPercent = 0.5f,
+            yPercent = 0.16f,
+            styleIndex = 0
+        ),
+        PlacedWidget(
+            id = "jesus_cross",
+            type = HomeWidgetType.JESUS_CROSS,
+            xPercent = 0.5f,
+            yPercent = 0.56f,
+            styleIndex = 0
+        )
     ),
+
+    val enabledWidgets: List<HomeWidgetType> = listOf(
+        HomeWidgetType.COMBINED_HERO,
+        HomeWidgetType.JESUS_CROSS
+    ),
+
     val scrollerAlignment: ScrollerAlignment = ScrollerAlignment.RIGHT,
     val defaultSearchProvider: WebSearchProvider = WebSearchProvider.DUCK_DUCK_GO,
 
-    // Gesture Action Targets (Can be built-in action string or "APP:packageName")
+    // Gesture Action Targets
     val swipeDownAction: String = "EXPAND_NOTIFICATIONS",
     val swipeUpAction: String = "OPEN_DRAWER",
     val swipeLeftAction: String = "NONE",
@@ -106,9 +135,11 @@ data class LauncherSettings(
     val twoFingerSwipeDownAction: String = "OPEN_SEARCH",
     val twoFingerSwipeUpAction: String = "OPEN_DRAWER",
 
-    // Custom Name & Cross Widgets
-    val customUserName: String = "SUVARNA",
+    // Custom Name & Widget Styles
+    val customUserName: String = "MICHEL",
+    val nameStyleIndex: Int = 0,
     val crossStyleIndex: Int = 0,
+    val clockStyleIndex: Int = 0,
 
     val is24HourClock: Boolean = true,
     val showScreenTimeGlance: Boolean = true,

@@ -3,9 +3,9 @@ package com.matrixlauncher.domain.repository
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
+import com.matrixlauncher.domain.model.PlacedWidget
 import com.matrixlauncher.domain.model.ScrollerAlignment
 import com.matrixlauncher.domain.model.WebSearchProvider
 import kotlinx.coroutines.flow.Flow
@@ -17,7 +17,7 @@ interface PreferencesRepository {
     suspend fun setDotDensity(density: DotDensity)
     suspend fun setDotShape(shape: DotShape)
     suspend fun setIconStyle(style: IconStyle)
-    suspend fun setEnabledWidgets(widgets: List<HomeWidgetType>)
+    suspend fun setPlacedWidgets(widgets: List<PlacedWidget>)
     suspend fun setScrollerAlignment(alignment: ScrollerAlignment)
 
     suspend fun setSwipeDownAction(action: String)
@@ -31,7 +31,9 @@ interface PreferencesRepository {
     suspend fun setTwoFingerSwipeUpAction(action: String)
 
     suspend fun setCustomUserName(name: String)
+    suspend fun setNameStyleIndex(index: Int)
     suspend fun setCrossStyleIndex(index: Int)
+    suspend fun setClockStyleIndex(index: Int)
 
     suspend fun setSearchProvider(provider: WebSearchProvider)
     suspend fun set24HourClock(is24Hour: Boolean)

@@ -16,12 +16,15 @@ import com.matrixlauncher.domain.model.DotShape
 import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
+import com.matrixlauncher.domain.model.PlacedWidget
 import com.matrixlauncher.domain.model.ScrollerAlignment
 import com.matrixlauncher.domain.model.WebSearchProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,6 +43,7 @@ class PreferencesManager @Inject constructor(
         val KEY_DOT_SHAPE = stringPreferencesKey("dot_shape")
         val KEY_ICON_STYLE = stringPreferencesKey("icon_style")
         val KEY_ENABLED_WIDGETS = stringSetPreferencesKey("enabled_widgets")
+        val KEY_PLACED_WIDGETS_JSON = stringPreferencesKey("placed_widgets_json")
         val KEY_SCROLLER_ALIGNMENT = stringPreferencesKey("scroller_alignment")
 
         // Gestures
@@ -53,9 +57,11 @@ class PreferencesManager @Inject constructor(
         val KEY_TWO_FINGER_SWIPE_DOWN = stringPreferencesKey("two_finger_swipe_down")
         val KEY_TWO_FINGER_SWIPE_UP = stringPreferencesKey("two_finger_swipe_up")
 
-        // Custom Name & Cross Widgets
+        // Custom Name & Widget Style Indices
         val KEY_CUSTOM_USER_NAME = stringPreferencesKey("custom_user_name")
+        val KEY_NAME_STYLE_INDEX = intPreferencesKey("name_style_index")
         val KEY_CROSS_STYLE_INDEX = intPreferencesKey("cross_style_index")
+        val KEY_CLOCK_STYLE_INDEX = intPreferencesKey("clock_style_index")
 
         val KEY_SEARCH_PROVIDER = stringPreferencesKey("search_provider")
         val KEY_24_HOUR_CLOCK = booleanPreferencesKey("is_24_hour_clock")
@@ -82,9 +88,9 @@ class PreferencesManager @Inject constructor(
             }
         }
         .map { prefs ->
-            val accentName = prefs[PreferencesKeys.KEY_ACCENT_COLOR] ?: AccentColor.CRIMSON.name
-            val accent = try { AccentColor.valueOf(accentName) } catch (e: Exception) { AccentColor.CRIMSON }
-            val customHex = prefs[PreferencesKeys.KEY_CUSTOM_ACCENT_HEX] ?: "#FF2E2E"
+            val accentName = prefs[PreferencesKeys.KEY_ACCENT_COLOR] ?: AccentColor.EMERALD.name
+            val accent = try { AccentColor.valueOf(accentName) } catch (e: Exception) { AccentColor.EMERALD }
+            val customHex = prefs[PreferencesKeys.KEY_CUSTOM_ACCENT_HEX] ?: "#00E676"
 
             val densityName = prefs[PreferencesKeys.KEY_DOT_DENSITY] ?: DotDensity.STANDARD.name
             val density = try { DotDensity.valueOf(densityName) } catch (e: Exception) { DotDensity.STANDARD }
@@ -95,20 +101,43 @@ class PreferencesManager @Inject constructor(
             val iconStyleName = prefs[PreferencesKeys.KEY_ICON_STYLE] ?: IconStyle.DOT_MATRIX_STOCK.name
             val iconStyle = try { IconStyle.valueOf(iconStyleName) } catch (e: Exception) { IconStyle.DOT_MATRIX_STOCK }
 
-            val enabledWidgetsSet = prefs[PreferencesKeys.KEY_ENABLED_WIDGETS]
-            val enabledWidgets = if (enabledWidgetsSet != null) {
-                enabledWidgetsSet.mapNotNull { name ->
-                    try { HomeWidgetType.valueOf(name) } catch (e: Exception) { null }
-                }
-            } else {
-                listOf(HomeWidgetType.CLOCK, HomeWidgetType.CUSTOM_NAME, HomeWidgetType.JESUS_CROSS, HomeWidgetType.WEATHER)
-            }
-
             val scrollerAlignName = prefs[PreferencesKeys.KEY_SCROLLER_ALIGNMENT] ?: ScrollerAlignment.RIGHT.name
             val scrollerAlign = try { ScrollerAlignment.valueOf(scrollerAlignName) } catch (e: Exception) { ScrollerAlignment.RIGHT }
 
             val providerName = prefs[PreferencesKeys.KEY_SEARCH_PROVIDER] ?: WebSearchProvider.DUCK_DUCK_GO.name
             val provider = try { WebSearchProvider.valueOf(providerName) } catch (e: Exception) { WebSearchProvider.DUCK_DUCK_GO }
+
+            // Placed widgets JSON deserialization
+            val placedJson = prefs[PreferencesKeys.KEY_PLACED_WIDGETS_JSON]
+            val placedList = if (!placedJson.isNullOrBlank()) {
+                try {
+                    val array = JSONArray(placedJson)
+                    val list = mutableListOf<PlacedWidget>()
+                    for (i in 0 until array.length()) {
+                        val obj = array.getJSONObject(i)
+                        val typeName = obj.getString("type")
+                        val type = try { HomeWidgetType.valueOf(typeName) } catch (e: Exception) { null }
+                        if (type != null) {
+                            list.add(
+                                PlacedWidget(
+                                    id = obj.optString("id", java.util.UUID.randomUUID().toString()),
+                                    type = type,
+                                    xPercent = obj.optDouble("xPercent", 0.5).toFloat(),
+                                    yPercent = obj.optDouble("yPercent", 0.5).toFloat(),
+                                    styleIndex = obj.optInt("styleIndex", 0)
+                                )
+                            )
+                        }
+                    }
+                    if (list.isNotEmpty()) list else defaultPlacedWidgets()
+                } catch (e: Exception) {
+                    defaultPlacedWidgets()
+                }
+            } else {
+                defaultPlacedWidgets()
+            }
+
+            val enabledWidgets = placedList.map { it.type }.distinct()
 
             LauncherSettings(
                 accentColor = accent,
@@ -116,6 +145,7 @@ class PreferencesManager @Inject constructor(
                 dotDensity = density,
                 dotShape = shape,
                 iconStyle = iconStyle,
+                placedWidgets = placedList,
                 enabledWidgets = enabledWidgets,
                 scrollerAlignment = scrollerAlign,
                 swipeDownAction = prefs[PreferencesKeys.KEY_SWIPE_DOWN_ACTION] ?: "EXPAND_NOTIFICATIONS",
@@ -127,8 +157,10 @@ class PreferencesManager @Inject constructor(
                 pinchOutAction = prefs[PreferencesKeys.KEY_PINCH_OUT_ACTION] ?: "OPEN_DRAWER",
                 twoFingerSwipeDownAction = prefs[PreferencesKeys.KEY_TWO_FINGER_SWIPE_DOWN] ?: "OPEN_SEARCH",
                 twoFingerSwipeUpAction = prefs[PreferencesKeys.KEY_TWO_FINGER_SWIPE_UP] ?: "OPEN_DRAWER",
-                customUserName = prefs[PreferencesKeys.KEY_CUSTOM_USER_NAME] ?: "SUVARNA",
+                customUserName = prefs[PreferencesKeys.KEY_CUSTOM_USER_NAME] ?: "MICHEL",
+                nameStyleIndex = prefs[PreferencesKeys.KEY_NAME_STYLE_INDEX] ?: 0,
                 crossStyleIndex = prefs[PreferencesKeys.KEY_CROSS_STYLE_INDEX] ?: 0,
+                clockStyleIndex = prefs[PreferencesKeys.KEY_CLOCK_STYLE_INDEX] ?: 0,
                 defaultSearchProvider = provider,
                 is24HourClock = prefs[PreferencesKeys.KEY_24_HOUR_CLOCK] ?: true,
                 showScreenTimeGlance = prefs[PreferencesKeys.KEY_SCREEN_TIME_GLANCE] ?: true,
@@ -146,12 +178,43 @@ class PreferencesManager @Inject constructor(
             )
         }
 
+    private fun defaultPlacedWidgets(): List<PlacedWidget> = listOf(
+        PlacedWidget(
+            id = "hero_clock",
+            type = HomeWidgetType.COMBINED_HERO,
+            xPercent = 0.5f,
+            yPercent = 0.16f,
+            styleIndex = 0
+        ),
+        PlacedWidget(
+            id = "jesus_cross",
+            type = HomeWidgetType.JESUS_CROSS,
+            xPercent = 0.5f,
+            yPercent = 0.56f,
+            styleIndex = 0
+        )
+    )
+
+    suspend fun setPlacedWidgets(widgets: List<PlacedWidget>) = edit { prefs ->
+        val array = JSONArray()
+        widgets.forEach { w ->
+            val obj = JSONObject().apply {
+                put("id", w.id)
+                put("type", w.type.name)
+                put("xPercent", w.xPercent.toDouble())
+                put("yPercent", w.yPercent.toDouble())
+                put("styleIndex", w.styleIndex)
+            }
+            array.put(obj)
+        }
+        prefs[PreferencesKeys.KEY_PLACED_WIDGETS_JSON] = array.toString()
+    }
+
     suspend fun setAccentColor(accent: AccentColor) = edit { it[PreferencesKeys.KEY_ACCENT_COLOR] = accent.name }
     suspend fun setCustomAccentHex(hex: String) = edit { it[PreferencesKeys.KEY_CUSTOM_ACCENT_HEX] = hex }
     suspend fun setDotDensity(density: DotDensity) = edit { it[PreferencesKeys.KEY_DOT_DENSITY] = density.name }
     suspend fun setDotShape(shape: DotShape) = edit { it[PreferencesKeys.KEY_DOT_SHAPE] = shape.name }
     suspend fun setIconStyle(style: IconStyle) = edit { it[PreferencesKeys.KEY_ICON_STYLE] = style.name }
-    suspend fun setEnabledWidgets(widgets: List<HomeWidgetType>) = edit { it[PreferencesKeys.KEY_ENABLED_WIDGETS] = widgets.map { w -> w.name }.toSet() }
     suspend fun setScrollerAlignment(align: ScrollerAlignment) = edit { it[PreferencesKeys.KEY_SCROLLER_ALIGNMENT] = align.name }
 
     suspend fun setSwipeDownAction(action: String) = edit { it[PreferencesKeys.KEY_SWIPE_DOWN_ACTION] = action }
@@ -165,7 +228,9 @@ class PreferencesManager @Inject constructor(
     suspend fun setTwoFingerSwipeUpAction(action: String) = edit { it[PreferencesKeys.KEY_TWO_FINGER_SWIPE_UP] = action }
 
     suspend fun setCustomUserName(name: String) = edit { it[PreferencesKeys.KEY_CUSTOM_USER_NAME] = name }
+    suspend fun setNameStyleIndex(index: Int) = edit { it[PreferencesKeys.KEY_NAME_STYLE_INDEX] = index }
     suspend fun setCrossStyleIndex(index: Int) = edit { it[PreferencesKeys.KEY_CROSS_STYLE_INDEX] = index }
+    suspend fun setClockStyleIndex(index: Int) = edit { it[PreferencesKeys.KEY_CLOCK_STYLE_INDEX] = index }
 
     suspend fun setSearchProvider(provider: WebSearchProvider) = edit { it[PreferencesKeys.KEY_SEARCH_PROVIDER] = provider.name }
     suspend fun set24HourClock(is24Hour: Boolean) = edit { it[PreferencesKeys.KEY_24_HOUR_CLOCK] = is24Hour }

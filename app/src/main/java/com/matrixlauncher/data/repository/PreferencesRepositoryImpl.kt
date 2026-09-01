@@ -4,9 +4,9 @@ import com.matrixlauncher.data.local.datastore.PreferencesManager
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
+import com.matrixlauncher.domain.model.PlacedWidget
 import com.matrixlauncher.domain.model.ScrollerAlignment
 import com.matrixlauncher.domain.model.WebSearchProvider
 import com.matrixlauncher.domain.repository.PreferencesRepository
@@ -26,7 +26,7 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun setDotDensity(density: DotDensity) = preferencesManager.setDotDensity(density)
     override suspend fun setDotShape(shape: DotShape) = preferencesManager.setDotShape(shape)
     override suspend fun setIconStyle(style: IconStyle) = preferencesManager.setIconStyle(style)
-    override suspend fun setEnabledWidgets(widgets: List<HomeWidgetType>) = preferencesManager.setEnabledWidgets(widgets)
+    override suspend fun setPlacedWidgets(widgets: List<PlacedWidget>) = preferencesManager.setPlacedWidgets(widgets)
     override suspend fun setScrollerAlignment(alignment: ScrollerAlignment) = preferencesManager.setScrollerAlignment(alignment)
 
     override suspend fun setSwipeDownAction(action: String) = preferencesManager.setSwipeDownAction(action)
@@ -40,7 +40,9 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun setTwoFingerSwipeUpAction(action: String) = preferencesManager.setTwoFingerSwipeUpAction(action)
 
     override suspend fun setCustomUserName(name: String) = preferencesManager.setCustomUserName(name)
+    override suspend fun setNameStyleIndex(index: Int) = preferencesManager.setNameStyleIndex(index)
     override suspend fun setCrossStyleIndex(index: Int) = preferencesManager.setCrossStyleIndex(index)
+    override suspend fun setClockStyleIndex(index: Int) = preferencesManager.setClockStyleIndex(index)
 
     override suspend fun setSearchProvider(provider: WebSearchProvider) = preferencesManager.setSearchProvider(provider)
     override suspend fun set24HourClock(is24Hour: Boolean) = preferencesManager.set24HourClock(is24Hour)

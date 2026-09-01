@@ -12,6 +12,7 @@ import com.matrixlauncher.domain.model.DotShape
 import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
+import com.matrixlauncher.domain.model.PlacedWidget
 import com.matrixlauncher.domain.model.ScrollerAlignment
 import com.matrixlauncher.domain.model.ScreenTimeStats
 import com.matrixlauncher.domain.model.WeatherInfo
@@ -79,13 +80,12 @@ sealed interface LauncherIntent {
     data class PerformGestureAction(val actionString: String) : LauncherIntent
     data class UpdateGestureAction(val gestureKey: String, val actionString: String) : LauncherIntent
 
-    // Widgets Management & Customization
-    data class UpdateEnabledWidgets(val widgets: List<HomeWidgetType>) : LauncherIntent
-    data class AddHomeWidget(val widget: HomeWidgetType) : LauncherIntent
-    data class RemoveHomeWidget(val widget: HomeWidgetType) : LauncherIntent
+    // Free-form Drag & Drop Widgets Placement
+    data class UpdatePlacedWidgets(val widgets: List<PlacedWidget>) : LauncherIntent
     data class UpdateCustomUserName(val name: String) : LauncherIntent
-    data object CycleCrossStyle : LauncherIntent
+    data class SetNameStyleIndex(val index: Int) : LauncherIntent
     data class SetCrossStyleIndex(val index: Int) : LauncherIntent
+    data class SetClockStyleIndex(val index: Int) : LauncherIntent
 
     // Icon Customization Studio
     data class UpdateIconStyle(val style: IconStyle) : LauncherIntent

@@ -115,12 +115,17 @@ fun MatrixLauncherApp(
                             showScratchpad = uiState.settings.showScratchpad,
                             scratchpadNote = uiState.settings.scratchpadNote,
                             customUserName = uiState.settings.customUserName,
+                            nameStyleIndex = uiState.settings.nameStyleIndex,
                             crossStyleIndex = uiState.settings.crossStyleIndex,
+                            clockStyleIndex = uiState.settings.clockStyleIndex,
                             iconStyle = uiState.settings.iconStyle,
                             dotShape = uiState.settings.dotShape,
-                            enabledWidgets = uiState.settings.enabledWidgets,
+                            placedWidgets = uiState.settings.placedWidgets,
                             mindfulPendingApp = uiState.mindfulAppPendingLaunch,
                             mindfulSecondsRemaining = uiState.mindfulSecondsRemaining,
+                            onWidgetsChange = { updatedWidgets ->
+                                viewModel.onIntent(LauncherIntent.UpdatePlacedWidgets(updatedWidgets))
+                            },
                             onAppClick = { app ->
                                 viewModel.onIntent(LauncherIntent.LaunchApp(app))
                             },
@@ -132,12 +137,6 @@ fun MatrixLauncherApp(
                             },
                             onUpdateScratchpadNote = { note ->
                                 viewModel.onIntent(LauncherIntent.UpdateScratchpadNote(note))
-                            },
-                            onUpdateUserName = { name ->
-                                viewModel.onIntent(LauncherIntent.UpdateCustomUserName(name))
-                            },
-                            onCycleCrossStyle = {
-                                viewModel.onIntent(LauncherIntent.CycleCrossStyle)
                             },
                             onCancelMindfulLaunch = {
                                 viewModel.onIntent(LauncherIntent.CancelMindfulLaunch)
@@ -174,15 +173,6 @@ fun MatrixLauncherApp(
                             },
                             onSetDefaultLauncherClick = {
                                 onRequestSetDefaultLauncher()
-                            },
-                            onSettingsClick = {
-                                viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.SETTINGS))
-                            },
-                            onWidgetRemove = { widget ->
-                                viewModel.onIntent(LauncherIntent.RemoveHomeWidget(widget))
-                            },
-                            onWidgetAdd = { widget ->
-                                viewModel.onIntent(LauncherIntent.AddHomeWidget(widget))
                             }
                         )
                     }
@@ -267,8 +257,17 @@ fun MatrixLauncherApp(
                             onIconStyleChange = { style ->
                                 viewModel.onIntent(LauncherIntent.UpdateIconStyle(style))
                             },
-                            onEnabledWidgetsChange = { widgets ->
-                                viewModel.onIntent(LauncherIntent.UpdateEnabledWidgets(widgets))
+                            onCustomUserNameChange = { name ->
+                                viewModel.onIntent(LauncherIntent.UpdateCustomUserName(name))
+                            },
+                            onNameStyleChange = { index ->
+                                viewModel.onIntent(LauncherIntent.SetNameStyleIndex(index))
+                            },
+                            onCrossStyleChange = { index ->
+                                viewModel.onIntent(LauncherIntent.SetCrossStyleIndex(index))
+                            },
+                            onClockStyleChange = { index ->
+                                viewModel.onIntent(LauncherIntent.SetClockStyleIndex(index))
                             },
                             onOpenIconStudio = {
                                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.ICON_STUDIO))

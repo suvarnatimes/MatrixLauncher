@@ -9,9 +9,9 @@ import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.domain.model.AppShortcutModel
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
+import com.matrixlauncher.domain.model.PlacedWidget
 import com.matrixlauncher.domain.model.ScrollerAlignment
 import com.matrixlauncher.domain.model.WebSearchProvider
 import com.matrixlauncher.domain.repository.AppDatabaseRepository
@@ -99,13 +99,12 @@ class LauncherViewModel @Inject constructor(
             is LauncherIntent.PerformGestureAction -> executeGestureAction(intent.actionString)
             is LauncherIntent.UpdateGestureAction -> updateGestureAction(intent.gestureKey, intent.actionString)
 
-            // Widgets
-            is LauncherIntent.UpdateEnabledWidgets -> updateEnabledWidgets(intent.widgets)
-            is LauncherIntent.AddHomeWidget -> addHomeWidget(intent.widget)
-            is LauncherIntent.RemoveHomeWidget -> removeHomeWidget(intent.widget)
+            // Free-form Drag & Drop Widgets
+            is LauncherIntent.UpdatePlacedWidgets -> updatePlacedWidgets(intent.widgets)
             is LauncherIntent.UpdateCustomUserName -> updateCustomUserName(intent.name)
-            is LauncherIntent.CycleCrossStyle -> cycleCrossStyle()
+            is LauncherIntent.SetNameStyleIndex -> setNameStyleIndex(intent.index)
             is LauncherIntent.SetCrossStyleIndex -> setCrossStyleIndex(intent.index)
+            is LauncherIntent.SetClockStyleIndex -> setClockStyleIndex(intent.index)
 
             // Icon Customization Studio
             is LauncherIntent.UpdateIconStyle -> updateIconStyle(intent.style)
@@ -188,24 +187,9 @@ class LauncherViewModel @Inject constructor(
         emitEffect(LauncherEffect.ShowToast("GESTURE ACTION UPDATED"))
     }
 
-    private fun addHomeWidget(widget: HomeWidgetType) = viewModelScope.launch {
-        val current = _uiState.value.settings.enabledWidgets.toMutableList()
-        if (!current.contains(widget)) {
-            current.add(widget)
-            preferencesRepository.setEnabledWidgets(current)
-            emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
-            emitEffect(LauncherEffect.ShowToast("ADDED ${widget.title}"))
-        }
-    }
-
-    private fun removeHomeWidget(widget: HomeWidgetType) = viewModelScope.launch {
-        val current = _uiState.value.settings.enabledWidgets.toMutableList()
-        if (current.contains(widget)) {
-            current.remove(widget)
-            preferencesRepository.setEnabledWidgets(current)
-            emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
-            emitEffect(LauncherEffect.ShowToast("REMOVED ${widget.title}"))
-        }
+    private fun updatePlacedWidgets(widgets: List<PlacedWidget>) = viewModelScope.launch {
+        preferencesRepository.setPlacedWidgets(widgets)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.TICK))
     }
 
     private fun updateCustomUserName(name: String) = viewModelScope.launch {
@@ -214,14 +198,18 @@ class LauncherViewModel @Inject constructor(
         emitEffect(LauncherEffect.ShowToast("NAME UPDATED"))
     }
 
-    private fun cycleCrossStyle() = viewModelScope.launch {
-        val next = (_uiState.value.settings.crossStyleIndex + 1) % 3
-        preferencesRepository.setCrossStyleIndex(next)
+    private fun setNameStyleIndex(index: Int) = viewModelScope.launch {
+        preferencesRepository.setNameStyleIndex(index)
         emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
     }
 
     private fun setCrossStyleIndex(index: Int) = viewModelScope.launch {
         preferencesRepository.setCrossStyleIndex(index)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+    }
+
+    private fun setClockStyleIndex(index: Int) = viewModelScope.launch {
+        preferencesRepository.setClockStyleIndex(index)
         emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
     }
 
@@ -508,11 +496,6 @@ class LauncherViewModel @Inject constructor(
         appDatabaseRepository.resetIconCustomization(packageName)
         emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.TICK))
         emitEffect(LauncherEffect.ShowToast("ICON RESET TO DEFAULT"))
-    }
-
-    private fun updateEnabledWidgets(widgets: List<HomeWidgetType>) = viewModelScope.launch {
-        preferencesRepository.setEnabledWidgets(widgets)
-        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.TICK))
     }
 
     private fun navigateTo(screen: LauncherScreen) {

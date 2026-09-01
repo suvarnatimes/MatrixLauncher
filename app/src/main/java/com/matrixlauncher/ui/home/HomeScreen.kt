@@ -26,14 +26,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.HourglassTop
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,8 +52,8 @@ import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.domain.model.BatteryInfo
 import com.matrixlauncher.domain.model.CalendarEventInfo
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
+import com.matrixlauncher.domain.model.PlacedWidget
 import com.matrixlauncher.domain.model.ScreenTimeStats
 import com.matrixlauncher.domain.model.WeatherInfo
 import com.matrixlauncher.ui.common.detectMatrixGestures
@@ -66,8 +64,7 @@ import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
 import com.matrixlauncher.ui.theme.SurfaceCard
 import com.matrixlauncher.ui.theme.TextPrimary
 import com.matrixlauncher.ui.theme.TextSecondary
-import com.matrixlauncher.ui.theme.White
-import com.matrixlauncher.ui.widgets.DotMatrixWidgetsContainer
+import com.matrixlauncher.ui.widgets.FreeFormWidgetsContainer
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -86,18 +83,19 @@ fun HomeScreen(
     showScratchpad: Boolean,
     scratchpadNote: String,
     customUserName: String,
+    nameStyleIndex: Int,
     crossStyleIndex: Int,
+    clockStyleIndex: Int,
     iconStyle: IconStyle,
     dotShape: DotShape,
-    enabledWidgets: List<HomeWidgetType>,
+    placedWidgets: List<PlacedWidget>,
     mindfulPendingApp: AppModel?,
     mindfulSecondsRemaining: Int,
+    onWidgetsChange: (List<PlacedWidget>) -> Unit,
     onAppClick: (AppModel) -> Unit,
     onAppLongClick: (AppModel) -> Unit,
     onCalendarClick: () -> Unit,
     onUpdateScratchpadNote: (String) -> Unit,
-    onUpdateUserName: (String) -> Unit,
-    onCycleCrossStyle: () -> Unit,
     onCancelMindfulLaunch: () -> Unit,
     onConfirmMindfulLaunch: () -> Unit,
     onSwipeUp: () -> Unit,
@@ -109,10 +107,7 @@ fun HomeScreen(
     onPinchIn: () -> Unit,
     onPinchOut: () -> Unit,
     onDoubleTap: () -> Unit,
-    onSetDefaultLauncherClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onWidgetRemove: (HomeWidgetType) -> Unit = {},
-    onWidgetAdd: (HomeWidgetType) -> Unit = {}
+    onSetDefaultLauncherClick: () -> Unit
 ) {
     val accent = LocalMatrixAccentColor.current
     var isEditingScratchpad by remember { mutableStateOf(false) }
@@ -134,111 +129,85 @@ fun HomeScreen(
                 onDoubleTap = onDoubleTap
             )
     ) {
-        // Settings Gear Icon Top-Right
-        IconButton(
-            onClick = onSettingsClick,
+        // Free-Form Positioned Widgets Layer (Drag & Drop anywhere on screen)
+        FreeFormWidgetsContainer(
+            placedWidgets = placedWidgets,
+            recentApps = recentApps,
+            batteryInfo = batteryInfo,
+            weatherInfo = weatherInfo,
+            calendarEvent = calendarEvent,
+            scratchpadNote = scratchpadNote,
+            customUserName = customUserName,
+            nameStyleIndex = nameStyleIndex,
+            crossStyleIndex = crossStyleIndex,
+            clockStyleIndex = clockStyleIndex,
+            is24Hour = is24Hour,
+            showBatteryBar = showBatteryBar,
+            iconStyle = iconStyle,
+            dotShape = dotShape,
+            onWidgetsChange = onWidgetsChange,
+            onAppClick = onAppClick,
+            onCalendarClick = onCalendarClick,
+            onScratchpadClick = { isEditingScratchpad = true },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Default Launcher Notice Banner (if not default)
+        AnimatedVisibility(
+            visible = !isDefaultLauncher,
+            enter = fadeIn(),
+            exit = fadeOut(),
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(12.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 10.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Settings",
-                tint = TextSecondary.copy(alpha = 0.85f)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .background(DarkSurface, RoundedCornerShape(6.dp))
+                    .border(1.dp, accent.primaryColor, RoundedCornerShape(6.dp))
+                    .clickable(onClick = onSetDefaultLauncherClick)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = accent.primaryColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "TAP TO SET AS DEFAULT LAUNCHER",
+                            color = TextPrimary,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = "[SET]",
+                        color = accent.primaryColor,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Header Area (Default Launcher Banner + Responsive Widgets)
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Default Launcher Warning & Setup Toggle Banner
-                AnimatedVisibility(
-                    visible = !isDefaultLauncher,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.92f)
-                            .background(DarkSurface, RoundedCornerShape(6.dp))
-                            .border(1.dp, accent.primaryColor, RoundedCornerShape(6.dp))
-                            .clickable(onClick = onSetDefaultLauncherClick)
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = accent.primaryColor,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "TAP TO SET AS DEFAULT LAUNCHER",
-                                    color = TextPrimary,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Text(
-                                text = "[SET]",
-                                color = accent.primaryColor,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Responsive Dot-Matrix Widgets Module (Interactive Add & Remove + Jesus Cross & Custom Name)
-                DotMatrixWidgetsContainer(
-                    enabledWidgets = enabledWidgets,
-                    recentApps = recentApps,
-                    batteryInfo = batteryInfo,
-                    weatherInfo = weatherInfo,
-                    calendarEvent = calendarEvent,
-                    scratchpadNote = scratchpadNote,
-                    customUserName = customUserName,
-                    crossStyleIndex = crossStyleIndex,
-                    is24Hour = is24Hour,
-                    showBatteryBar = showBatteryBar,
-                    iconStyle = iconStyle,
-                    dotShape = dotShape,
-                    onWidgetRemove = onWidgetRemove,
-                    onWidgetAdd = onWidgetAdd,
-                    onAppClick = onAppClick,
-                    onCalendarClick = onCalendarClick,
-                    onScratchpadClick = { isEditingScratchpad = true },
-                    onUpdateUserName = onUpdateUserName,
-                    onCycleCrossStyle = onCycleCrossStyle
-                )
-            }
-
-            // Pinned Favorites List (Clean & Minimalist, No Default Text Clutter)
+        // Pinned Favorites List on Bottom (if any pinned apps exist)
+        if (pinnedFavorites.isNotEmpty()) {
             Column(
                 modifier = Modifier
+                    .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -253,9 +222,6 @@ fun HomeScreen(
                     )
                 }
             }
-
-            // Minimal bottom spacer (clean look)
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // Scratchpad Edit Dialog
@@ -299,7 +265,7 @@ private fun FavoriteAppItem(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(vertical = 7.dp, horizontal = 12.dp),
+            .padding(vertical = 6.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (iconStyle != IconStyle.TEXT_ONLY) {
@@ -307,26 +273,26 @@ private fun FavoriteAppItem(
                 app = app,
                 iconStyle = iconStyle,
                 dotShape = dotShape,
-                sizeDp = 26.dp
+                sizeDp = 24.dp
             )
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
         } else {
-            Canvas(modifier = Modifier.size(8.dp)) {
+            Canvas(modifier = Modifier.size(6.dp)) {
                 drawCircle(
                     color = accentColor.primaryColor,
                     radius = 2.dp.toPx()
                 )
             }
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
         }
 
         Text(
             text = app.displayLabel.uppercase(),
             color = TextPrimary,
             fontFamily = FontFamily.Monospace,
-            fontSize = 16.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
-            letterSpacing = 1.2.sp
+            letterSpacing = 1.sp
         )
 
         if (app.isWorkProfile) {
@@ -335,7 +301,7 @@ private fun FavoriteAppItem(
                 text = "[W]",
                 color = accentColor.primaryColor,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
         }
