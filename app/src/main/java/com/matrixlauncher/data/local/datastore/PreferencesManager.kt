@@ -53,6 +53,10 @@ class PreferencesManager @Inject constructor(
         val KEY_TWO_FINGER_SWIPE_DOWN = stringPreferencesKey("two_finger_swipe_down")
         val KEY_TWO_FINGER_SWIPE_UP = stringPreferencesKey("two_finger_swipe_up")
 
+        // Custom Name & Cross Widgets
+        val KEY_CUSTOM_USER_NAME = stringPreferencesKey("custom_user_name")
+        val KEY_CROSS_STYLE_INDEX = intPreferencesKey("cross_style_index")
+
         val KEY_SEARCH_PROVIDER = stringPreferencesKey("search_provider")
         val KEY_24_HOUR_CLOCK = booleanPreferencesKey("is_24_hour_clock")
         val KEY_SCREEN_TIME_GLANCE = booleanPreferencesKey("show_screen_time")
@@ -97,7 +101,7 @@ class PreferencesManager @Inject constructor(
                     try { HomeWidgetType.valueOf(name) } catch (e: Exception) { null }
                 }
             } else {
-                listOf(HomeWidgetType.CLOCK, HomeWidgetType.WEATHER, HomeWidgetType.TELEMETRY, HomeWidgetType.SCRATCHPAD)
+                listOf(HomeWidgetType.CLOCK, HomeWidgetType.CUSTOM_NAME, HomeWidgetType.JESUS_CROSS, HomeWidgetType.WEATHER)
             }
 
             val scrollerAlignName = prefs[PreferencesKeys.KEY_SCROLLER_ALIGNMENT] ?: ScrollerAlignment.RIGHT.name
@@ -123,6 +127,8 @@ class PreferencesManager @Inject constructor(
                 pinchOutAction = prefs[PreferencesKeys.KEY_PINCH_OUT_ACTION] ?: "OPEN_DRAWER",
                 twoFingerSwipeDownAction = prefs[PreferencesKeys.KEY_TWO_FINGER_SWIPE_DOWN] ?: "OPEN_SEARCH",
                 twoFingerSwipeUpAction = prefs[PreferencesKeys.KEY_TWO_FINGER_SWIPE_UP] ?: "OPEN_DRAWER",
+                customUserName = prefs[PreferencesKeys.KEY_CUSTOM_USER_NAME] ?: "SUVARNA",
+                crossStyleIndex = prefs[PreferencesKeys.KEY_CROSS_STYLE_INDEX] ?: 0,
                 defaultSearchProvider = provider,
                 is24HourClock = prefs[PreferencesKeys.KEY_24_HOUR_CLOCK] ?: true,
                 showScreenTimeGlance = prefs[PreferencesKeys.KEY_SCREEN_TIME_GLANCE] ?: true,
@@ -157,6 +163,9 @@ class PreferencesManager @Inject constructor(
     suspend fun setPinchOutAction(action: String) = edit { it[PreferencesKeys.KEY_PINCH_OUT_ACTION] = action }
     suspend fun setTwoFingerSwipeDownAction(action: String) = edit { it[PreferencesKeys.KEY_TWO_FINGER_SWIPE_DOWN] = action }
     suspend fun setTwoFingerSwipeUpAction(action: String) = edit { it[PreferencesKeys.KEY_TWO_FINGER_SWIPE_UP] = action }
+
+    suspend fun setCustomUserName(name: String) = edit { it[PreferencesKeys.KEY_CUSTOM_USER_NAME] = name }
+    suspend fun setCrossStyleIndex(index: Int) = edit { it[PreferencesKeys.KEY_CROSS_STYLE_INDEX] = index }
 
     suspend fun setSearchProvider(provider: WebSearchProvider) = edit { it[PreferencesKeys.KEY_SEARCH_PROVIDER] = provider.name }
     suspend fun set24HourClock(is24Hour: Boolean) = edit { it[PreferencesKeys.KEY_24_HOUR_CLOCK] = is24Hour }

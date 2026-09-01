@@ -39,6 +39,9 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun setTwoFingerSwipeDownAction(action: String) = preferencesManager.setTwoFingerSwipeDownAction(action)
     override suspend fun setTwoFingerSwipeUpAction(action: String) = preferencesManager.setTwoFingerSwipeUpAction(action)
 
+    override suspend fun setCustomUserName(name: String) = preferencesManager.setCustomUserName(name)
+    override suspend fun setCrossStyleIndex(index: Int) = preferencesManager.setCrossStyleIndex(index)
+
     override suspend fun setSearchProvider(provider: WebSearchProvider) = preferencesManager.setSearchProvider(provider)
     override suspend fun set24HourClock(is24Hour: Boolean) = preferencesManager.set24HourClock(is24Hour)
     override suspend fun setShowScreenTimeGlance(show: Boolean) = preferencesManager.setShowScreenTimeGlance(show)

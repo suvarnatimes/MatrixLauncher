@@ -30,6 +30,9 @@ interface PreferencesRepository {
     suspend fun setTwoFingerSwipeDownAction(action: String)
     suspend fun setTwoFingerSwipeUpAction(action: String)
 
+    suspend fun setCustomUserName(name: String)
+    suspend fun setCrossStyleIndex(index: Int)
+
     suspend fun setSearchProvider(provider: WebSearchProvider)
     suspend fun set24HourClock(is24Hour: Boolean)
     suspend fun setShowScreenTimeGlance(show: Boolean)

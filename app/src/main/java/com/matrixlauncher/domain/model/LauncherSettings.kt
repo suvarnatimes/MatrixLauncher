@@ -40,6 +40,8 @@ enum class IconStyle(val label: String, val description: String) {
 
 enum class HomeWidgetType(val title: String, val description: String) {
     CLOCK("LED CLOCK & DATE", "5x7 dot-matrix clock with battery dot-bar"),
+    CUSTOM_NAME("CUSTOM NAME BANNER", "Large auto-scaling personalized dot-matrix name"),
+    JESUS_CROSS("JESUS CROSSES WIDGET", "Large centered LED dot-matrix cross art (3 styles)"),
     WEATHER("LIVE WEATHER GLANCE", "Current temperature, LED condition, and humidity"),
     TELEMETRY("DEVICE TELEMETRY", "Storage meter, RAM usage, and battery gauge"),
     SCRATCHPAD("QUICK SCRATCHPAD", "Interactive sticky note on your home screen"),
@@ -86,9 +88,9 @@ data class LauncherSettings(
     val iconStyle: IconStyle = IconStyle.DOT_MATRIX_STOCK,
     val enabledWidgets: List<HomeWidgetType> = listOf(
         HomeWidgetType.CLOCK,
-        HomeWidgetType.WEATHER,
-        HomeWidgetType.TELEMETRY,
-        HomeWidgetType.SCRATCHPAD
+        HomeWidgetType.CUSTOM_NAME,
+        HomeWidgetType.JESUS_CROSS,
+        HomeWidgetType.WEATHER
     ),
     val scrollerAlignment: ScrollerAlignment = ScrollerAlignment.RIGHT,
     val defaultSearchProvider: WebSearchProvider = WebSearchProvider.DUCK_DUCK_GO,
@@ -103,6 +105,10 @@ data class LauncherSettings(
     val pinchOutAction: String = "OPEN_DRAWER",
     val twoFingerSwipeDownAction: String = "OPEN_SEARCH",
     val twoFingerSwipeUpAction: String = "OPEN_DRAWER",
+
+    // Custom Name & Cross Widgets
+    val customUserName: String = "SUVARNA",
+    val crossStyleIndex: Int = 0,
 
     val is24HourClock: Boolean = true,
     val showScreenTimeGlance: Boolean = true,

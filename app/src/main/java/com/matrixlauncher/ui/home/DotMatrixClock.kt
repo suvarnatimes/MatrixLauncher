@@ -1,10 +1,5 @@
 package com.matrixlauncher.ui.home
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.BatteryInfo
@@ -32,9 +26,6 @@ import com.matrixlauncher.ui.graphics.DotMatrixCanvas.calculateDotMatrixTextHeig
 import com.matrixlauncher.ui.graphics.DotMatrixCanvas.calculateDotMatrixTextWidth
 import com.matrixlauncher.ui.graphics.DotMatrixCanvas.drawDotBar
 import com.matrixlauncher.ui.graphics.DotMatrixCanvas.drawDotMatrixText
-import com.matrixlauncher.ui.theme.DotDimGlow
-import com.matrixlauncher.ui.theme.DotInactiveColor
-import com.matrixlauncher.ui.theme.DotMatrixTheme
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
 import com.matrixlauncher.ui.theme.White
 import kotlinx.coroutines.delay
@@ -87,10 +78,10 @@ fun DotMatrixClock(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 16.dp),
+            .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Date Header
+        // Date Header (No inactive background dots to avoid halo)
         Canvas(
             modifier = Modifier
                 .width(with(density) { dateWidth.toDp() })
@@ -103,13 +94,13 @@ fun DotMatrixClock(
                 dotSpacing = dateDotSpacing,
                 charSpacing = dateCharSpacing,
                 activeColor = accent.primaryColor,
-                inactiveColor = DotInactiveColor
+                inactiveColor = null
             )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // Big Time Clock
+        // Big Time Clock (Pure crisp glowing white active dots)
         Row(
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.Center
@@ -126,7 +117,7 @@ fun DotMatrixClock(
                     dotSpacing = clockDotSpacing,
                     charSpacing = clockCharSpacing,
                     activeColor = White,
-                    inactiveColor = DotInactiveColor
+                    inactiveColor = null
                 )
             }
 
@@ -146,7 +137,7 @@ fun DotMatrixClock(
                         dotSpacing = dateDotSpacing,
                         charSpacing = dateCharSpacing,
                         activeColor = accent.primaryColor,
-                        inactiveColor = DotInactiveColor
+                        inactiveColor = null
                     )
                 }
             }
@@ -154,9 +145,9 @@ fun DotMatrixClock(
 
         // Battery Dot Bar
         if (showBatteryBar) {
-            Spacer(modifier = Modifier.height(16.dp))
-            val batDotRadius = with(density) { 2.dp.toPx() }
-            val batDotSpacing = with(density) { 7.dp.toPx() }
+            Spacer(modifier = Modifier.height(12.dp))
+            val batDotRadius = with(density) { 1.8.dp.toPx() }
+            val batDotSpacing = with(density) { 6.5.dp.toPx() }
             val batTotalDots = 10
             val batActiveDots = batteryInfo.activeDotsOnTenScale
             val batBarWidth = with(density) { ((batTotalDots - 1) * batDotSpacing + batDotRadius * 2).toDp() }
@@ -181,7 +172,7 @@ fun DotMatrixClock(
                         dotSpacing = dateDotSpacing,
                         charSpacing = dateCharSpacing,
                         activeColor = if (batteryInfo.level <= 15) AccentColor.CRIMSON.primaryColor else White,
-                        inactiveColor = DotInactiveColor
+                        inactiveColor = null
                     )
                 }
 
@@ -199,22 +190,10 @@ fun DotMatrixClock(
                         dotRadius = batDotRadius,
                         dotSpacing = batDotSpacing,
                         activeColor = if (batteryInfo.isCharging) accent.primaryColor else White,
-                        inactiveColor = DotInactiveColor
+                        inactiveColor = androidx.compose.ui.graphics.Color(0xFF161616)
                     )
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFF000000)
-@Composable
-private fun DotMatrixClockPreview() {
-    DotMatrixTheme(accentColor = AccentColor.CRIMSON) {
-        DotMatrixClock(
-            is24Hour = true,
-            batteryInfo = BatteryInfo(level = 85, isCharging = false),
-            showBatteryBar = true
-        )
     }
 }

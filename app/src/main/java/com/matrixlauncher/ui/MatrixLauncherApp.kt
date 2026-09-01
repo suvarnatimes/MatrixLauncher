@@ -114,6 +114,8 @@ fun MatrixLauncherApp(
                             showScreenTime = uiState.settings.showScreenTimeGlance,
                             showScratchpad = uiState.settings.showScratchpad,
                             scratchpadNote = uiState.settings.scratchpadNote,
+                            customUserName = uiState.settings.customUserName,
+                            crossStyleIndex = uiState.settings.crossStyleIndex,
                             iconStyle = uiState.settings.iconStyle,
                             dotShape = uiState.settings.dotShape,
                             enabledWidgets = uiState.settings.enabledWidgets,
@@ -130,6 +132,12 @@ fun MatrixLauncherApp(
                             },
                             onUpdateScratchpadNote = { note ->
                                 viewModel.onIntent(LauncherIntent.UpdateScratchpadNote(note))
+                            },
+                            onUpdateUserName = { name ->
+                                viewModel.onIntent(LauncherIntent.UpdateCustomUserName(name))
+                            },
+                            onCycleCrossStyle = {
+                                viewModel.onIntent(LauncherIntent.CycleCrossStyle)
                             },
                             onCancelMindfulLaunch = {
                                 viewModel.onIntent(LauncherIntent.CancelMindfulLaunch)

@@ -103,6 +103,9 @@ class LauncherViewModel @Inject constructor(
             is LauncherIntent.UpdateEnabledWidgets -> updateEnabledWidgets(intent.widgets)
             is LauncherIntent.AddHomeWidget -> addHomeWidget(intent.widget)
             is LauncherIntent.RemoveHomeWidget -> removeHomeWidget(intent.widget)
+            is LauncherIntent.UpdateCustomUserName -> updateCustomUserName(intent.name)
+            is LauncherIntent.CycleCrossStyle -> cycleCrossStyle()
+            is LauncherIntent.SetCrossStyleIndex -> setCrossStyleIndex(intent.index)
 
             // Icon Customization Studio
             is LauncherIntent.UpdateIconStyle -> updateIconStyle(intent.style)
@@ -203,6 +206,23 @@ class LauncherViewModel @Inject constructor(
             emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
             emitEffect(LauncherEffect.ShowToast("REMOVED ${widget.title}"))
         }
+    }
+
+    private fun updateCustomUserName(name: String) = viewModelScope.launch {
+        preferencesRepository.setCustomUserName(name)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+        emitEffect(LauncherEffect.ShowToast("NAME UPDATED"))
+    }
+
+    private fun cycleCrossStyle() = viewModelScope.launch {
+        val next = (_uiState.value.settings.crossStyleIndex + 1) % 3
+        preferencesRepository.setCrossStyleIndex(next)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+    }
+
+    private fun setCrossStyleIndex(index: Int) = viewModelScope.launch {
+        preferencesRepository.setCrossStyleIndex(index)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
     }
 
     private fun checkDefaultLauncherStatus() {
@@ -547,6 +567,7 @@ class LauncherViewModel @Inject constructor(
                 preferencesRepository.setScrollerAlignment(backup.settings.scrollerAlignment)
                 preferencesRepository.set24HourClock(backup.settings.is24HourClock)
                 preferencesRepository.setMaxFavoritesCount(backup.settings.maxFavoritesCount)
+                preferencesRepository.setCustomUserName(backup.settings.customUserName)
 
                 backup.customLabels.forEach { (pkg, label) ->
                     appDatabaseRepository.setCustomLabel(pkg, label)

@@ -63,9 +63,7 @@ import com.matrixlauncher.ui.graphics.DotMatrixAppIcon
 import com.matrixlauncher.ui.theme.Black
 import com.matrixlauncher.ui.theme.DarkSurface
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
-import com.matrixlauncher.ui.theme.OffWhite
 import com.matrixlauncher.ui.theme.SurfaceCard
-import com.matrixlauncher.ui.theme.TextMuted
 import com.matrixlauncher.ui.theme.TextPrimary
 import com.matrixlauncher.ui.theme.TextSecondary
 import com.matrixlauncher.ui.theme.White
@@ -87,6 +85,8 @@ fun HomeScreen(
     showScreenTime: Boolean,
     showScratchpad: Boolean,
     scratchpadNote: String,
+    customUserName: String,
+    crossStyleIndex: Int,
     iconStyle: IconStyle,
     dotShape: DotShape,
     enabledWidgets: List<HomeWidgetType>,
@@ -96,6 +96,8 @@ fun HomeScreen(
     onAppLongClick: (AppModel) -> Unit,
     onCalendarClick: () -> Unit,
     onUpdateScratchpadNote: (String) -> Unit,
+    onUpdateUserName: (String) -> Unit,
+    onCycleCrossStyle: () -> Unit,
     onCancelMindfulLaunch: () -> Unit,
     onConfirmMindfulLaunch: () -> Unit,
     onSwipeUp: () -> Unit,
@@ -208,7 +210,7 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Responsive Dot-Matrix Widgets Module (Interactive Add & Remove)
+                // Responsive Dot-Matrix Widgets Module (Interactive Add & Remove + Jesus Cross & Custom Name)
                 DotMatrixWidgetsContainer(
                     enabledWidgets = enabledWidgets,
                     recentApps = recentApps,
@@ -216,6 +218,8 @@ fun HomeScreen(
                     weatherInfo = weatherInfo,
                     calendarEvent = calendarEvent,
                     scratchpadNote = scratchpadNote,
+                    customUserName = customUserName,
+                    crossStyleIndex = crossStyleIndex,
                     is24Hour = is24Hour,
                     showBatteryBar = showBatteryBar,
                     iconStyle = iconStyle,
@@ -224,7 +228,9 @@ fun HomeScreen(
                     onWidgetAdd = onWidgetAdd,
                     onAppClick = onAppClick,
                     onCalendarClick = onCalendarClick,
-                    onScratchpadClick = { isEditingScratchpad = true }
+                    onScratchpadClick = { isEditingScratchpad = true },
+                    onUpdateUserName = onUpdateUserName,
+                    onCycleCrossStyle = onCycleCrossStyle
                 )
             }
 
@@ -248,7 +254,7 @@ fun HomeScreen(
                 }
             }
 
-            // Minimal bottom spacer (clutter text removed for clean look)
+            // Minimal bottom spacer (clean look)
             Spacer(modifier = Modifier.height(16.dp))
         }
 

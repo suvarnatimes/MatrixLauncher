@@ -1,8 +1,6 @@
 package com.matrixlauncher.ui.widgets
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +45,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,7 +62,10 @@ import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.WeatherInfo
 import com.matrixlauncher.ui.graphics.DotMatrixAppIcon
+import com.matrixlauncher.ui.graphics.DotMatrixCanvas.calculateDotMatrixTextHeight
+import com.matrixlauncher.ui.graphics.DotMatrixCanvas.calculateDotMatrixTextWidth
 import com.matrixlauncher.ui.graphics.DotMatrixCanvas.drawDotBar
+import com.matrixlauncher.ui.graphics.DotMatrixCanvas.drawDotMatrixText
 import com.matrixlauncher.ui.home.DotMatrixClock
 import com.matrixlauncher.ui.theme.Black
 import com.matrixlauncher.ui.theme.DarkSurface
@@ -67,6 +74,9 @@ import com.matrixlauncher.ui.theme.DotInactiveColor
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
 import com.matrixlauncher.ui.theme.OffWhite
 import com.matrixlauncher.ui.theme.SurfaceCard
+import com.matrixlauncher.ui.theme.TextMuted
+import com.matrixlauncher.ui.theme.TextPrimary
+import com.matrixlauncher.ui.theme.TextSecondary
 import com.matrixlauncher.ui.theme.White
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -78,6 +88,8 @@ fun DotMatrixWidgetsContainer(
     weatherInfo: WeatherInfo,
     calendarEvent: CalendarEventInfo,
     scratchpadNote: String,
+    customUserName: String,
+    crossStyleIndex: Int,
     is24Hour: Boolean,
     showBatteryBar: Boolean,
     iconStyle: IconStyle,
@@ -87,15 +99,18 @@ fun DotMatrixWidgetsContainer(
     onAppClick: (AppModel) -> Unit,
     onCalendarClick: () -> Unit,
     onScratchpadClick: () -> Unit,
+    onUpdateUserName: (String) -> Unit = {},
+    onCycleCrossStyle: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isEditMode by remember { mutableStateOf(false) }
     var showAddWidgetSheet by remember { mutableStateOf(false) }
+    var showEditNameDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // Edit Mode Done Bar
         AnimatedVisibility(visible = isEditMode) {
@@ -110,7 +125,7 @@ fun DotMatrixWidgetsContainer(
             ) {
                 Text(
                     text = "EDITING HOME WIDGETS",
-                    color = White,
+                    color = TextPrimary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -127,7 +142,7 @@ fun DotMatrixWidgetsContainer(
                     TextButton(onClick = { isEditMode = false }) {
                         Text(
                             text = "DONE",
-                            color = White,
+                            color = TextPrimary,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
                         )
@@ -142,8 +157,13 @@ fun DotMatrixWidgetsContainer(
                     .fillMaxWidth()
                     .combinedClickable(
                         onClick = {
-                            if (widgetType == HomeWidgetType.SCRATCHPAD) onScratchpadClick()
-                            else if (widgetType == HomeWidgetType.CALENDAR) onCalendarClick()
+                            when (widgetType) {
+                                HomeWidgetType.SCRATCHPAD -> onScratchpadClick()
+                                HomeWidgetType.CALENDAR -> onCalendarClick()
+                                HomeWidgetType.CUSTOM_NAME -> showEditNameDialog = true
+                                HomeWidgetType.JESUS_CROSS -> onCycleCrossStyle()
+                                else -> {}
+                            }
                         },
                         onLongClick = { isEditMode = !isEditMode }
                     ),
@@ -155,6 +175,20 @@ fun DotMatrixWidgetsContainer(
                             is24Hour = is24Hour,
                             batteryInfo = batteryInfo,
                             showBatteryBar = showBatteryBar
+                        )
+                    }
+
+                    HomeWidgetType.CUSTOM_NAME -> {
+                        DotMatrixNameWidget(
+                            name = customUserName,
+                            onClick = { showEditNameDialog = true }
+                        )
+                    }
+
+                    HomeWidgetType.JESUS_CROSS -> {
+                        DotMatrixJesusCrossWidget(
+                            styleIndex = crossStyleIndex,
+                            onClick = onCycleCrossStyle
                         )
                     }
 
@@ -237,7 +271,257 @@ fun DotMatrixWidgetsContainer(
                 }
             )
         }
+
+        // Edit Custom Name Dialog
+        if (showEditNameDialog) {
+            EditNameDialog(
+                currentName = customUserName,
+                onDismiss = { showEditNameDialog = false },
+                onSave = {
+                    onUpdateUserName(it)
+                    showEditNameDialog = false
+                }
+            )
+        }
     }
+}
+
+/**
+ * Large auto-scaling custom user name widget.
+ */
+@Composable
+fun DotMatrixNameWidget(
+    name: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val accent = LocalMatrixAccentColor.current
+    val density = LocalDensity.current
+    val displayName = remember(name) { name.ifBlank { "SUVARNA" }.uppercase() }
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        val availableWidthPx = with(density) { maxWidth.toPx() * 0.88f }
+        val nameLength = displayName.length.coerceAtLeast(1)
+
+        // Dynamic auto-scaling formula
+        val computedDotSpacing = (availableWidthPx / (nameLength * 5.8f)).coerceIn(4.0f, 11.5f)
+        val computedDotRadius = (computedDotSpacing * 0.38f).coerceIn(1.5f, 4.5f)
+        val computedCharSpacing = computedDotSpacing * 1.5f
+
+        val totalWidth = calculateDotMatrixTextWidth(displayName.length, computedDotRadius, computedDotSpacing, computedCharSpacing)
+        val totalHeight = calculateDotMatrixTextHeight(computedDotRadius, computedDotSpacing)
+
+        Canvas(
+            modifier = Modifier
+                .width(with(density) { totalWidth.toDp() })
+                .height(with(density) { totalHeight.toDp() })
+        ) {
+            drawDotMatrixText(
+                text = displayName,
+                topLeft = Offset.Zero,
+                dotRadius = computedDotRadius,
+                dotSpacing = computedDotSpacing,
+                charSpacing = computedCharSpacing,
+                activeColor = White,
+                inactiveColor = null
+            )
+        }
+    }
+}
+
+/**
+ * Large centered Jesus Cross dot-matrix widget featuring 3 styles:
+ * 0: Triple Crosses (Golgotha with center tall cross)
+ * 1: Radiant Beaming Latin Cross
+ * 2: Celtic Halo Cross
+ */
+@Composable
+fun DotMatrixJesusCrossWidget(
+    styleIndex: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val accent = LocalMatrixAccentColor.current
+    val density = LocalDensity.current
+
+    // 3 Unique Dot Matrix Cross Patterns
+    val crossPattern = remember(styleIndex % 3) {
+        when (styleIndex % 3) {
+            0 -> arrayOf(
+                // Style 0: Triple Crosses (Golgotha 3 Crosses)
+                "0000000001000000000",
+                "0000000001000000000",
+                "0000000001000000000",
+                "0010000001000000100",
+                "0111000111110001110",
+                "0010000001000000100",
+                "0010000001000000100",
+                "0010000001000000100",
+                "0010000001000000100",
+                "0000000001000000000",
+                "0000000001000000000",
+                "0000000001000000000",
+                "0000000001000000000",
+                "1111111111111111111"
+            )
+            1 -> arrayOf(
+                // Style 1: Radiant Beaming Latin Cross
+                "00000000100000000",
+                "00000000100000000",
+                "01000000100000010",
+                "00100000100000100",
+                "00011111111111000",
+                "00100000100000100",
+                "01000000100000010",
+                "00000000100000000",
+                "00000000100000000",
+                "00000000100000000",
+                "00000000100000000",
+                "00000000100000000",
+                "00000000100000000",
+                "00000111111100000"
+            )
+            else -> arrayOf(
+                // Style 2: Celtic Halo Cross
+                "000000010000000",
+                "000000010000000",
+                "000011010110000",
+                "001100010001100",
+                "010000010000010",
+                "111111111111111",
+                "010000010000010",
+                "001100010001100",
+                "000011010110000",
+                "000000010000000",
+                "000000010000000",
+                "000000010000000",
+                "000000010000000",
+                "000001111100000"
+            )
+        }
+    }
+
+    val gridRows = crossPattern.size
+    val gridCols = crossPattern[0].length
+
+    val dotSpacing = with(density) { 7.5.dp.toPx() }
+    val dotRadius = with(density) { 2.2.dp.toPx() }
+
+    val widgetWidth = with(density) { (gridCols * dotSpacing).toDp() }
+    val widgetHeight = with(density) { (gridRows * dotSpacing).toDp() }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(
+            modifier = Modifier
+                .width(widgetWidth)
+                .height(widgetHeight)
+        ) {
+            val startX = (size.width - gridCols * dotSpacing) / 2f
+            val startY = (size.height - gridRows * dotSpacing) / 2f
+
+            for (r in 0 until gridRows) {
+                val rowLine = crossPattern[r]
+                for (c in 0 until gridCols) {
+                    val isActive = c < rowLine.length && rowLine[c] == '1'
+                    if (isActive) {
+                        val cx = startX + c * dotSpacing + dotSpacing / 2f
+                        val cy = startY + r * dotSpacing + dotSpacing / 2f
+                        drawCircle(
+                            color = if (r == gridRows - 1 && styleIndex % 3 == 0) accent.primaryColor else White,
+                            radius = dotRadius,
+                            center = Offset(cx, cy)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EditNameDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    val accent = LocalMatrixAccentColor.current
+    var nameInput by remember { mutableStateOf(currentName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        title = {
+            Text(
+                text = "CUSTOM NAME BANNER",
+                color = TextPrimary,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Enter your name to display large in the center of the home screen:",
+                    color = TextSecondary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                BasicTextField(
+                    value = nameInput,
+                    onValueChange = { nameInput = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceCard, RoundedCornerShape(4.dp))
+                        .padding(12.dp),
+                    textStyle = TextStyle(
+                        color = TextPrimary,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    cursorBrush = SolidColor(accent.primaryColor),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onSave(nameInput.trim())
+                }
+            ) {
+                Text(
+                    text = "SET NAME",
+                    color = accent.primaryColor,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "CANCEL",
+                    color = TextSecondary,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+        }
+    )
 }
 
 @Composable
@@ -251,7 +535,7 @@ fun DotMatrixWeatherWidget(
         modifier = modifier
             .fillMaxWidth(0.92f)
             .background(DarkSurface.copy(alpha = 0.7f), RoundedCornerShape(6.dp))
-            .border(1.dp, DotInactiveColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+            .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Row(
@@ -273,7 +557,7 @@ fun DotMatrixWeatherWidget(
                 Column {
                     Text(
                         text = "${weatherInfo.temperatureCelsius}°C // ${weatherInfo.condition.label}",
-                        color = White,
+                        color = TextPrimary,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
@@ -282,7 +566,7 @@ fun DotMatrixWeatherWidget(
                     )
                     Text(
                         text = "LOCATION: ${weatherInfo.location}",
-                        color = DotInactiveColor,
+                        color = TextSecondary,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 10.sp
                     )
@@ -312,7 +596,7 @@ fun DotMatrixTelemetryWidget(
         modifier = modifier
             .fillMaxWidth(0.92f)
             .background(DarkSurface.copy(alpha = 0.7f), RoundedCornerShape(6.dp))
-            .border(1.dp, DotInactiveColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+            .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Row(
@@ -325,13 +609,13 @@ fun DotMatrixTelemetryWidget(
                 Icon(
                     imageVector = Icons.Default.SdStorage,
                     contentDescription = null,
-                    tint = OffWhite,
+                    tint = TextSecondary,
                     modifier = Modifier.size(12.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "STORAGE 64%",
-                    color = OffWhite,
+                    color = TextPrimary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium
@@ -370,7 +654,7 @@ fun DotMatrixTelemetryWidget(
                     dotRadius = bDotRadius,
                     dotSpacing = bDotSpacing,
                     activeColor = if (batteryInfo.isCharging) accent.primaryColor else White,
-                    inactiveColor = DotInactiveColor.copy(alpha = 0.4f)
+                    inactiveColor = Color(0xFF161616)
                 )
             }
         }
@@ -393,7 +677,7 @@ fun DotMatrixRecentAppsWidget(
         modifier = modifier
             .fillMaxWidth(0.92f)
             .background(DarkSurface.copy(alpha = 0.7f), RoundedCornerShape(6.dp))
-            .border(1.dp, DotInactiveColor.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+            .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -426,7 +710,7 @@ fun DotMatrixRecentAppsWidget(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = app.displayLabel.uppercase(),
-                            color = White,
+                            color = TextPrimary,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 12.sp,
                             maxLines = 1
@@ -450,7 +734,7 @@ fun DotMatrixStatusBarGlanceWidget(
         modifier = modifier
             .fillMaxWidth(0.92f)
             .background(DarkSurface.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-            .border(1.dp, DotInactiveColor.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+            .border(1.dp, DividerColor, RoundedCornerShape(4.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Row(
@@ -467,7 +751,7 @@ fun DotMatrixStatusBarGlanceWidget(
             )
             Text(
                 text = "BAT: ${batteryInfo.level}% ${if (batteryInfo.isCharging) "[CHG]" else ""}",
-                color = White,
+                color = TextPrimary,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp
             )
@@ -487,7 +771,7 @@ fun DotMatrixScratchpadWidget(
         modifier = modifier
             .fillMaxWidth(0.92f)
             .background(SurfaceCard.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
-            .border(1.dp, DotInactiveColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+            .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
@@ -533,7 +817,7 @@ fun DotMatrixCalendarWidget(
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = if (calendarEvent.hasEvent) calendarEvent.formattedGlance else "NO UPCOMING EVENTS // TAP TO OPEN",
-                color = if (calendarEvent.hasEvent) White else DotInactiveColor,
+                color = if (calendarEvent.hasEvent) TextPrimary else TextSecondary,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
@@ -553,13 +837,13 @@ fun DotMatrixQuoteWidget(
         modifier = modifier
             .fillMaxWidth(0.92f)
             .background(DarkSurface.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-            .border(1.dp, DotInactiveColor.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+            .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = "“$quote”",
-            color = OffWhite.copy(alpha = 0.8f),
+            color = TextPrimary,
             fontFamily = FontFamily.Monospace,
             fontSize = 9.5.sp,
             letterSpacing = 0.5.sp,
@@ -592,7 +876,7 @@ fun AddWidgetBottomSheet(
         ) {
             Text(
                 text = "ADD WIDGET TO HOME SCREEN",
-                color = White,
+                color = TextPrimary,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
@@ -602,7 +886,7 @@ fun AddWidgetBottomSheet(
             if (availableWidgets.isEmpty()) {
                 Text(
                     text = "ALL WIDGETS ARE ALREADY ON HOME SCREEN",
-                    color = DotInactiveColor,
+                    color = TextSecondary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp
                 )
@@ -619,14 +903,14 @@ fun AddWidgetBottomSheet(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = widget.title,
-                                color = White,
+                                color = TextPrimary,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = widget.description,
-                                color = DotInactiveColor,
+                                color = TextSecondary,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp
                             )
