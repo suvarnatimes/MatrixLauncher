@@ -1,5 +1,7 @@
 package com.matrixlauncher.ui.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.matrixlauncher.domain.model.AccentColor
@@ -8,6 +10,8 @@ import com.matrixlauncher.domain.model.AppShortcutModel
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
 import com.matrixlauncher.domain.model.DoubleTapAction
+import com.matrixlauncher.domain.model.HomeWidgetType
+import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.ScrollerAlignment
 import com.matrixlauncher.domain.model.SwipeGestureAction
@@ -26,6 +30,7 @@ import com.matrixlauncher.ui.mvi.LauncherIntent
 import com.matrixlauncher.ui.mvi.LauncherScreen
 import com.matrixlauncher.ui.mvi.LauncherUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -45,6 +50,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LauncherViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val launcherAppsRepository: LauncherAppsRepository,
     private val preferencesRepository: PreferencesRepository,
     private val appDatabaseRepository: AppDatabaseRepository
@@ -64,11 +70,15 @@ class LauncherViewModel @Inject constructor(
         observePackageEvents()
         observeSettingsAndData()
         observeTelemetry()
+        checkDefaultLauncherStatus()
     }
 
     fun onIntent(intent: LauncherIntent) {
         when (intent) {
-            is LauncherIntent.RefreshApps -> loadInstalledApps()
+            is LauncherIntent.RefreshApps -> {
+                loadInstalledApps()
+                checkDefaultLauncherStatus()
+            }
             is LauncherIntent.SearchQueryChanged -> onSearchQueryChanged(intent.query)
             is LauncherIntent.LaunchApp -> handleAppLaunchRequest(intent.app)
             is LauncherIntent.LaunchAppShortcut -> launchAppShortcut(intent.shortcut)
@@ -81,10 +91,22 @@ class LauncherViewModel @Inject constructor(
             is LauncherIntent.OpenRenameDialog -> _uiState.update { it.copy(selectedAppForRename = intent.app, selectedAppForMenu = null) }
             is LauncherIntent.NavigateTo -> navigateTo(intent.screen)
             is LauncherIntent.ExpandNotificationShade -> launcherAppsRepository.expandNotificationShade()
-            is LauncherIntent.OpenDefaultLauncherSettings -> launcherAppsRepository.openDefaultLauncherSettings()
+            is LauncherIntent.OpenDefaultLauncherSettings -> {
+                launcherAppsRepository.openDefaultLauncherSettings()
+                checkDefaultLauncherStatus()
+            }
             is LauncherIntent.OpenCalendar -> launcherAppsRepository.launchCalendar()
 
-            // Enhanced Customizations
+            // Icon Customization Studio
+            is LauncherIntent.UpdateIconStyle -> updateIconStyle(intent.style)
+            is LauncherIntent.UpdateAppIcon -> updateAppIcon(intent.packageName, intent.iconUri, intent.colorHex, intent.glyphName, intent.shape)
+            is LauncherIntent.UploadAppIconImage -> uploadAppIconImage(intent.packageName, intent.uri)
+            is LauncherIntent.ResetAppIcon -> resetAppIcon(intent.packageName)
+
+            // Widgets
+            is LauncherIntent.UpdateEnabledWidgets -> updateEnabledWidgets(intent.widgets)
+
+            // Theme & Controls
             is LauncherIntent.UpdateAccentColor -> updateAccentColor(intent.color)
             is LauncherIntent.UpdateCustomAccentHex -> updateCustomAccentHex(intent.hex)
             is LauncherIntent.UpdateDotDensity -> updateDotDensity(intent.density)
@@ -118,6 +140,11 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
+    private fun checkDefaultLauncherStatus() {
+        val isDefault = launcherAppsRepository.isDefaultLauncher()
+        _uiState.update { it.copy(isDefaultLauncher = isDefault) }
+    }
+
     private fun loadInstalledApps() {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true) }
@@ -144,17 +171,21 @@ class LauncherViewModel @Inject constructor(
         combine(
             rawInstalledApps,
             preferencesRepository.settingsFlow,
-            appDatabaseRepository.observeCustomLabels(),
-            appDatabaseRepository.observeHiddenPackages()
-        ) { rawApps, settings, customLabels, hiddenPackages ->
+            appDatabaseRepository.observeAllCustomizations()
+        ) { rawApps, settings, customizations ->
+            val customizationMap = customizations.associateBy { it.packageName }
+
             val decoratedApps = rawApps.map { app ->
-                val custom = customLabels[app.packageName]
-                val isHidden = hiddenPackages.contains(app.packageName)
+                val entity = customizationMap[app.packageName]
                 val isFav = settings.favoritePackageNames.contains(app.packageName)
                 app.copy(
-                    customLabel = custom,
-                    isHidden = isHidden,
-                    isFavorite = isFav
+                    customLabel = entity?.customLabel,
+                    isHidden = entity?.isHidden ?: false,
+                    isFavorite = isFav,
+                    customIconUri = entity?.customIconUri,
+                    customIconColorHex = entity?.customIconColorHex,
+                    customGlyphName = entity?.customGlyphName,
+                    customIconShape = entity?.customIconShape
                 )
             }
 
@@ -387,7 +418,54 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
+    // Icon Studio operations
+    private fun updateIconStyle(style: IconStyle) = viewModelScope.launch {
+        preferencesRepository.setIconStyle(style)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.TICK))
+    }
+
+    private fun updateAppIcon(
+        packageName: String,
+        iconUri: String?,
+        colorHex: String?,
+        glyphName: String?,
+        shape: String?
+    ) = viewModelScope.launch {
+        appDatabaseRepository.updateIconCustomization(packageName, iconUri, colorHex, glyphName, shape)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+        emitEffect(LauncherEffect.ShowToast("ICON SAVED"))
+    }
+
+    private fun uploadAppIconImage(packageName: String, uri: Uri) = viewModelScope.launch {
+        try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            if (inputStream != null) {
+                val savedUri = launcherAppsRepository.saveCustomIconImage(packageName, inputStream)
+                appDatabaseRepository.updateIconCustomization(packageName, savedUri, null, null, null)
+                emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.HEAVY_CLICK))
+                emitEffect(LauncherEffect.ShowToast("CUSTOM PNG ICON APPLIED"))
+            }
+        } catch (e: Exception) {
+            emitEffect(LauncherEffect.ShowToast("FAILED TO LOAD IMAGE"))
+        }
+    }
+
+    private fun resetAppIcon(packageName: String) = viewModelScope.launch {
+        appDatabaseRepository.resetIconCustomization(packageName)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.TICK))
+        emitEffect(LauncherEffect.ShowToast("ICON RESET TO DEFAULT"))
+    }
+
+    private fun updateEnabledWidgets(widgets: List<HomeWidgetType>) = viewModelScope.launch {
+        preferencesRepository.setEnabledWidgets(widgets)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.TICK))
+    }
+
     private fun navigateTo(screen: LauncherScreen) {
+        if (screen == LauncherScreen.HOME || screen == LauncherScreen.SETTINGS) {
+            checkDefaultLauncherStatus()
+        }
+
         _uiState.update { current ->
             if (screen == LauncherScreen.HOME) {
                 current.copy(

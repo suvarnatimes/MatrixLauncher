@@ -1,7 +1,9 @@
 package com.matrixlauncher
 
+import android.content.Context
 import android.graphics.Rect
 import android.os.Bundle
+import com.matrixlauncher.data.local.db.AppCustomizationEntity
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.domain.model.AppShortcutModel
@@ -10,6 +12,8 @@ import com.matrixlauncher.domain.model.CalendarEventInfo
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
 import com.matrixlauncher.domain.model.DoubleTapAction
+import com.matrixlauncher.domain.model.HomeWidgetType
+import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.PackageChangeEvent
 import com.matrixlauncher.domain.model.ScrollerAlignment
@@ -23,6 +27,7 @@ import com.matrixlauncher.domain.repository.PreferencesRepository
 import com.matrixlauncher.ui.mvi.LauncherIntent
 import com.matrixlauncher.ui.mvi.LauncherScreen
 import com.matrixlauncher.ui.viewmodel.LauncherViewModel
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -41,12 +46,14 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.InputStream
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LauncherViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
+    private val mockContext = mockk<Context>(relaxed = true)
     private val fakeAppsRepository = FakeLauncherAppsRepository()
     private val fakePreferencesRepository = FakePreferencesRepository()
     private val fakeDatabaseRepository = FakeAppDatabaseRepository()
@@ -57,6 +64,7 @@ class LauncherViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         viewModel = LauncherViewModel(
+            context = mockContext,
             launcherAppsRepository = fakeAppsRepository,
             preferencesRepository = fakePreferencesRepository,
             appDatabaseRepository = fakeDatabaseRepository
@@ -108,6 +116,9 @@ class LauncherViewModelTest {
         viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.SETTINGS))
         assertEquals(LauncherScreen.SETTINGS, viewModel.uiState.value.currentScreen)
 
+        viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.ICON_STUDIO))
+        assertEquals(LauncherScreen.ICON_STUDIO, viewModel.uiState.value.currentScreen)
+
         viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.HOME))
         assertEquals(LauncherScreen.HOME, viewModel.uiState.value.currentScreen)
     }
@@ -150,12 +161,14 @@ private class FakeLauncherAppsRepository : LauncherAppsRepository {
     override fun observeWeatherInfo(): Flow<WeatherInfo> = weatherFlow.asStateFlow()
     override fun observeUpcomingCalendarEvent(): Flow<CalendarEventInfo> = calendarFlow.asStateFlow()
     override fun hasUsageStatsPermission(): Boolean = true
-    override fun expandNotificationShade() {}
+    override fun isDefaultLauncher(): Boolean = true
     override fun openDefaultLauncherSettings() {}
+    override fun expandNotificationShade() {}
     override fun toggleTorch(): Boolean = true
     override fun launchCamera() {}
     override fun launchCalendar() {}
     override fun launchWebSearch(url: String) {}
+    override suspend fun saveCustomIconImage(packageName: String, inputStream: InputStream): String = "file:///test/icon.png"
 }
 
 private class FakePreferencesRepository : PreferencesRepository {
@@ -174,6 +187,12 @@ private class FakePreferencesRepository : PreferencesRepository {
     }
     override suspend fun setDotShape(shape: DotShape) {
         _settingsFlow.value = _settingsFlow.value.copy(dotShape = shape)
+    }
+    override suspend fun setIconStyle(style: IconStyle) {
+        _settingsFlow.value = _settingsFlow.value.copy(iconStyle = style)
+    }
+    override suspend fun setEnabledWidgets(widgets: List<HomeWidgetType>) {
+        _settingsFlow.value = _settingsFlow.value.copy(enabledWidgets = widgets)
     }
     override suspend fun setScrollerAlignment(alignment: ScrollerAlignment) {
         _settingsFlow.value = _settingsFlow.value.copy(scrollerAlignment = alignment)
@@ -237,10 +256,11 @@ private class FakePreferencesRepository : PreferencesRepository {
 private class FakeAppDatabaseRepository : AppDatabaseRepository {
     val customLabels = mutableMapOf<String, String>()
     val hiddenPackages = mutableSetOf<String>()
-
+    private val customizationsFlow = MutableStateFlow<List<AppCustomizationEntity>>(emptyList())
     private val customLabelsFlow = MutableStateFlow<Map<String, String>>(emptyMap())
     private val hiddenPackagesFlow = MutableStateFlow<Set<String>>(emptySet())
 
+    override fun observeAllCustomizations(): Flow<List<AppCustomizationEntity>> = customizationsFlow.asStateFlow()
     override fun observeCustomLabels(): Flow<Map<String, String>> = customLabelsFlow.asStateFlow()
     override fun observeHiddenPackages(): Flow<Set<String>> = hiddenPackagesFlow.asStateFlow()
 
@@ -253,4 +273,14 @@ private class FakeAppDatabaseRepository : AppDatabaseRepository {
         if (isHidden) hiddenPackages.add(packageName) else hiddenPackages.remove(packageName)
         hiddenPackagesFlow.value = hiddenPackages.toSet()
     }
+
+    override suspend fun updateIconCustomization(
+        packageName: String,
+        iconUri: String?,
+        colorHex: String?,
+        glyphName: String?,
+        shape: String?
+    ) {}
+
+    override suspend fun resetIconCustomization(packageName: String) {}
 }

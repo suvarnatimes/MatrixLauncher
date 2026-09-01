@@ -1,7 +1,9 @@
 package com.matrixlauncher.data.repository
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AppOpsManager
+import android.app.role.RoleManager
 import android.app.usage.UsageStatsManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -11,7 +13,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.LauncherActivityInfo
 import android.content.pm.LauncherApps
-import android.content.pm.ShortcutInfo
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.database.Cursor
 import android.graphics.Rect
 import android.hardware.camera2.CameraManager
@@ -25,6 +28,7 @@ import android.os.UserManager
 import android.provider.CalendarContract
 import android.provider.MediaStore
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.domain.model.AppShortcutModel
 import com.matrixlauncher.domain.model.BatteryInfo
@@ -35,10 +39,15 @@ import com.matrixlauncher.domain.model.WeatherCondition
 import com.matrixlauncher.domain.model.WeatherInfo
 import com.matrixlauncher.domain.repository.LauncherAppsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -51,54 +60,121 @@ class LauncherAppsRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : LauncherAppsRepository {
 
-    private val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-    private val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
+    private val launcherApps: LauncherApps? = try {
+        context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
+    } catch (e: Exception) {
+        null
+    }
+
+    private val userManager: UserManager? = try {
+        context.getSystemService(Context.USER_SERVICE) as? UserManager
+    } catch (e: Exception) {
+        null
+    }
+
+    private val packageManager: PackageManager = context.packageManager
     private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
     private val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
 
     private var isTorchOn = false
 
-    override suspend fun getInstalledApps(): List<AppModel> {
+    override suspend fun getInstalledApps(): List<AppModel> = withContext(Dispatchers.IO) {
         val appList = mutableListOf<AppModel>()
         val currentUserHandle = Process.myUserHandle()
-        val userProfiles = userManager.userProfiles
+        val userProfiles = userManager?.userProfiles ?: listOf(currentUserHandle)
 
-        for (profile in userProfiles) {
-            val userSerial = userManager.getSerialNumberForUser(profile)
-            val isWorkProfile = profile != currentUserHandle
-            val activities: List<LauncherActivityInfo> = try {
-                launcherApps.getActivityList(null, profile)
+        var loadedViaLauncherApps = false
+
+        if (launcherApps != null) {
+            for (profile in userProfiles) {
+                val userSerial = userManager?.getSerialNumberForUser(profile) ?: 0L
+                val isWorkProfile = profile != currentUserHandle
+                val activities: List<LauncherActivityInfo> = try {
+                    launcherApps.getActivityList(null, profile)
+                } catch (e: Exception) {
+                    emptyList()
+                }
+
+                if (activities.isNotEmpty()) {
+                    loadedViaLauncherApps = true
+                }
+
+                for (activity in activities) {
+                    val pkgName = activity.applicationInfo.packageName
+                    if (pkgName == context.packageName) {
+                        continue
+                    }
+
+                    val appModel = AppModel(
+                        packageName = pkgName,
+                        activityName = activity.componentName.className,
+                        label = activity.label.toString(),
+                        userHandle = profile,
+                        userSerial = userSerial,
+                        isWorkProfile = isWorkProfile,
+                        installTime = try {
+                            activity.firstInstallTime
+                        } catch (e: Exception) {
+                            0L
+                        }
+                    )
+                    appList.add(appModel)
+                }
+            }
+        }
+
+        // Fallback using PackageManager queryIntentActivities if LauncherApps was restricted or empty
+        if (!loadedViaLauncherApps || appList.isEmpty()) {
+            val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+            val resolveInfos: List<ResolveInfo> = try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    packageManager.queryIntentActivities(
+                        mainIntent,
+                        PackageManager.ResolveInfoFlags.of(0)
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    packageManager.queryIntentActivities(mainIntent, 0)
+                }
             } catch (e: Exception) {
                 emptyList()
             }
 
-            for (activity in activities) {
-                val pkgName = activity.applicationInfo.packageName
-                if (pkgName == context.packageName) {
-                    continue
+            for (resolveInfo in resolveInfos) {
+                val pkgName = resolveInfo.activityInfo.packageName
+                if (pkgName == context.packageName) continue
+
+                val label = try {
+                    resolveInfo.loadLabel(packageManager).toString()
+                } catch (e: Exception) {
+                    pkgName
                 }
 
                 val appModel = AppModel(
                     packageName = pkgName,
-                    activityName = activity.componentName.className,
-                    label = activity.label.toString(),
-                    userHandle = profile,
-                    userSerial = userSerial,
-                    isWorkProfile = isWorkProfile,
-                    installTime = try {
-                        activity.firstInstallTime
-                    } catch (e: Exception) {
-                        0L
-                    }
+                    activityName = resolveInfo.activityInfo.name,
+                    label = label,
+                    userHandle = currentUserHandle,
+                    userSerial = 0L,
+                    isWorkProfile = false
                 )
-                appList.add(appModel)
+                if (appList.none { it.packageName == pkgName }) {
+                    appList.add(appModel)
+                }
             }
         }
 
-        return appList.sortedBy { it.displayLabel.lowercase() }
+        appList.sortedBy { it.displayLabel.lowercase() }
     }
 
     override fun observePackageChanges(): Flow<PackageChangeEvent> = callbackFlow {
+        if (launcherApps == null) {
+            awaitClose { }
+            return@callbackFlow
+        }
+
         val callback = object : LauncherApps.Callback() {
             override fun onPackageAdded(packageName: String, user: UserHandle) {
                 trySend(PackageChangeEvent.PackageAdded(packageName, user))
@@ -129,9 +205,18 @@ class LauncherAppsRepositoryImpl @Inject constructor(
             }
         }
 
-        launcherApps.registerCallback(callback)
+        try {
+            launcherApps.registerCallback(callback)
+        } catch (e: Exception) {
+            // Ignore if callback registration not permitted
+        }
+
         awaitClose {
-            launcherApps.unregisterCallback(callback)
+            try {
+                launcherApps.unregisterCallback(callback)
+            } catch (e: Exception) {
+                // Ignore
+            }
         }
     }
 
@@ -143,12 +228,24 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         return runCatching {
             val component = ComponentName(app.packageName, app.activityName)
             val user = app.userHandle ?: Process.myUserHandle()
-            launcherApps.startMainActivity(component, user, sourceBounds, opts)
+            if (launcherApps != null) {
+                try {
+                    launcherApps.startMainActivity(component, user, sourceBounds, opts)
+                    return@runCatching
+                } catch (e: Exception) {
+                    // Fallback to PackageManager launch
+                }
+            }
+            val intent = packageManager.getLaunchIntentForPackage(app.packageName)
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent, opts)
+            }
         }
     }
 
     override suspend fun getShortcutsForApp(app: AppModel): List<AppShortcutModel> {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return emptyList()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1 || launcherApps == null) return emptyList()
 
         return try {
             val query = LauncherApps.ShortcutQuery().apply {
@@ -180,7 +277,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
 
     override fun startShortcut(shortcut: AppShortcutModel): Result<Unit> {
         return runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1 && launcherApps != null) {
                 val user = shortcut.userHandle ?: Process.myUserHandle()
                 launcherApps.startShortcut(shortcut.packageName, shortcut.id, null, null, user)
             }
@@ -191,7 +288,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         val component = ComponentName(app.packageName, app.activityName)
         val user = app.userHandle ?: Process.myUserHandle()
         try {
-            launcherApps.startAppDetailsActivity(component, user, null, null)
+            launcherApps?.startAppDetailsActivity(component, user, null, null)
         } catch (e: Exception) {
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                 data = Uri.fromParts("package", app.packageName, null)
@@ -233,7 +330,17 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         }
 
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        val initialIntent = context.registerReceiver(receiver, filter)
+        val initialIntent = try {
+            ContextCompat.registerReceiver(
+                context,
+                receiver,
+                filter,
+                ContextCompat.RECEIVER_EXPORTED
+            )
+        } catch (e: Exception) {
+            null
+        }
+
         if (initialIntent != null) {
             val level = initialIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
             val scale = initialIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
@@ -254,7 +361,11 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         }
 
         awaitClose {
-            context.unregisterReceiver(receiver)
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (e: Exception) {
+                // Ignore
+            }
         }
     }
 
@@ -284,8 +395,8 @@ class LauncherAppsRepositoryImpl @Inject constructor(
             emptyList()
         }
 
-        val totalTime = usageStats.sumOf { it.totalTimeInForeground }
-        val topApp = usageStats.maxByOrNull { it.totalTimeInForeground }?.packageName
+        val totalTime = usageStats?.sumOf { it.totalTimeInForeground } ?: 0L
+        val topApp = usageStats?.maxByOrNull { it.totalTimeInForeground }?.packageName
 
         emit(
             ScreenTimeStats(
@@ -297,7 +408,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
     }
 
     override fun observeWeatherInfo(): Flow<WeatherInfo> = flow {
-        // High efficiency mock telemetry (can be connected to Open-Meteo or system provider)
+        // High-efficiency local dot-matrix telemetry
         emit(
             WeatherInfo(
                 temperatureCelsius = 24,
@@ -309,6 +420,16 @@ class LauncherAppsRepositoryImpl @Inject constructor(
     }
 
     override fun observeUpcomingCalendarEvent(): Flow<CalendarEventInfo> = flow {
+        val hasCalendarPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_CALENDAR
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasCalendarPermission) {
+            emit(CalendarEventInfo(hasEvent = false))
+            return@flow
+        }
+
         try {
             val now = System.currentTimeMillis()
             val endOfDay = Calendar.getInstance().apply {
@@ -378,19 +499,37 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    @SuppressLint("WrongConstant")
-    override fun expandNotificationShade() {
-        try {
-            val statusBarService = context.getSystemService("statusbar")
-            val statusBarManagerClass = Class.forName("android.app.StatusBarManager")
-            val expandMethod = statusBarManagerClass.getMethod("expandNotificationsPanel")
-            expandMethod.invoke(statusBarService)
-        } catch (e: Exception) {
-            // Fallback
+    override fun isDefaultLauncher(): Boolean {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
         }
+        val resolveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.resolveActivity(homeIntent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+        }
+        return resolveInfo?.activityInfo?.packageName == context.packageName
     }
 
     override fun openDefaultLauncherSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
+            if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_HOME)) {
+                if (!roleManager.isRoleHeld(RoleManager.ROLE_HOME)) {
+                    val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    try {
+                        context.startActivity(intent)
+                        return
+                    } catch (e: Exception) {
+                        // Fallback
+                    }
+                }
+            }
+        }
+
         val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -407,6 +546,18 @@ class LauncherAppsRepositoryImpl @Inject constructor(
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(fallback)
+        }
+    }
+
+    @SuppressLint("WrongConstant")
+    override fun expandNotificationShade() {
+        try {
+            val statusBarService = context.getSystemService("statusbar")
+            val statusBarManagerClass = Class.forName("android.app.StatusBarManager")
+            val expandMethod = statusBarManagerClass.getMethod("expandNotificationsPanel")
+            expandMethod.invoke(statusBarService)
+        } catch (e: Exception) {
+            // Fallback
         }
     }
 
@@ -460,5 +611,23 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             // Fallback
         }
+    }
+
+    override suspend fun saveCustomIconImage(
+        packageName: String,
+        inputStream: InputStream
+    ): String = withContext(Dispatchers.IO) {
+        val iconsDir = File(context.filesDir, "custom_icons")
+        if (!iconsDir.exists()) {
+            iconsDir.mkdirs()
+        }
+        val safeFileName = "${packageName.replace('.', '_')}_icon_${System.currentTimeMillis()}.png"
+        val targetFile = File(iconsDir, safeFileName)
+
+        FileOutputStream(targetFile).use { output ->
+            inputStream.copyTo(output)
+        }
+
+        Uri.fromFile(targetFile).toString()
     }
 }

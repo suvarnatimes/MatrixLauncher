@@ -34,6 +34,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -74,20 +75,21 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.domain.model.AppShortcutModel
+import com.matrixlauncher.domain.model.DotShape
+import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.ScrollerAlignment
 import com.matrixlauncher.domain.model.WebSearchProvider
 import com.matrixlauncher.ui.common.SystemSettingShortcut
 import com.matrixlauncher.ui.common.SystemSettingsShortcuts
+import com.matrixlauncher.ui.graphics.DotMatrixAppIcon
 import com.matrixlauncher.ui.theme.DarkSurface
 import com.matrixlauncher.ui.theme.DividerColor
 import com.matrixlauncher.ui.theme.DotInactiveColor
-import com.matrixlauncher.ui.theme.DotMatrixTheme
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
 import com.matrixlauncher.ui.theme.OffWhite
 import com.matrixlauncher.ui.theme.SurfaceCard
@@ -103,6 +105,8 @@ fun AppDrawerScreen(
     calculatedResult: String? = null,
     searchQuery: String,
     autoFocusSearch: Boolean,
+    iconStyle: IconStyle = IconStyle.DOT_MATRIX_STOCK,
+    dotShape: DotShape = DotShape.CIRCLE,
     scrollerAlignment: ScrollerAlignment = ScrollerAlignment.RIGHT,
     selectedAppForMenu: AppModel?,
     selectedAppShortcuts: List<AppShortcutModel> = emptyList(),
@@ -114,6 +118,7 @@ fun AppDrawerScreen(
     onToggleFavorite: (String) -> Unit,
     onRenameApp: (packageName: String, newLabel: String?) -> Unit,
     onHideApp: (packageName: String, isHidden: Boolean) -> Unit,
+    onOpenIconStudio: () -> Unit,
     onAppInfo: (AppModel) -> Unit,
     onUninstall: (AppModel) -> Unit,
     onWebSearch: (query: String, provider: WebSearchProvider) -> Unit,
@@ -278,6 +283,8 @@ fun AppDrawerScreen(
 
                             DrawerAppItem(
                                 app = app,
+                                iconStyle = iconStyle,
+                                dotShape = dotShape,
                                 accentColor = accent,
                                 onClick = { onAppClick(app) },
                                 onLongClick = { onAppLongClick(app) }
@@ -304,7 +311,7 @@ fun AppDrawerScreen(
             }
         }
 
-        // Context Menu Sheet with App Shortcuts
+        // Context Menu Sheet with App Shortcuts and Edit Icon option
         if (selectedAppForMenu != null) {
             AppContextMenuSheet(
                 app = selectedAppForMenu,
@@ -313,6 +320,10 @@ fun AppDrawerScreen(
                 onShortcutClick = onShortcutClick,
                 onToggleFavorite = { onToggleFavorite(selectedAppForMenu.packageName) },
                 onRename = { /* Handled in parent */ },
+                onEditIcon = {
+                    onCloseContextMenu()
+                    onOpenIconStudio()
+                },
                 onHide = { onHideApp(selectedAppForMenu.packageName, true) },
                 onAppInfo = { onAppInfo(selectedAppForMenu) },
                 onUninstall = { onUninstall(selectedAppForMenu) }
@@ -542,9 +553,12 @@ private fun DrawerSectionHeader(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DrawerAppItem(
     app: AppModel,
+    iconStyle: IconStyle,
+    dotShape: DotShape,
     accentColor: AccentColor,
     onClick: () -> Unit,
     onLongClick: () -> Unit
@@ -556,17 +570,26 @@ private fun DrawerAppItem(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(vertical = 10.dp, horizontal = 8.dp),
+            .padding(vertical = 8.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Canvas(modifier = Modifier.size(6.dp)) {
-            drawCircle(
-                color = if (app.isFavorite) accentColor.primaryColor else DotInactiveColor,
-                radius = 2.dp.toPx()
+        if (iconStyle != IconStyle.TEXT_ONLY) {
+            DotMatrixAppIcon(
+                app = app,
+                iconStyle = iconStyle,
+                dotShape = dotShape,
+                sizeDp = 24.dp
             )
+            Spacer(modifier = Modifier.width(14.dp))
+        } else {
+            Canvas(modifier = Modifier.size(6.dp)) {
+                drawCircle(
+                    color = if (app.isFavorite) accentColor.primaryColor else DotInactiveColor,
+                    radius = 2.dp.toPx()
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
         }
-
-        Spacer(modifier = Modifier.width(14.dp))
 
         Text(
             text = app.displayLabel.uppercase(),
@@ -610,6 +633,7 @@ fun AppContextMenuSheet(
     onShortcutClick: (AppShortcutModel) -> Unit,
     onToggleFavorite: () -> Unit,
     onRename: () -> Unit,
+    onEditIcon: () -> Unit,
     onHide: () -> Unit,
     onAppInfo: () -> Unit,
     onUninstall: () -> Unit
@@ -710,6 +734,13 @@ fun AppContextMenuSheet(
                 text = "RENAME APP",
                 color = White,
                 onClick = { onRename() }
+            )
+
+            ContextMenuAction(
+                icon = Icons.Default.Brush,
+                text = "CUSTOMIZE ICON (STUDIO)",
+                color = accent.primaryColor,
+                onClick = onEditIcon
             )
 
             ContextMenuAction(

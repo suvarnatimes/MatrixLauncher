@@ -5,13 +5,9 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [AppCustomizationEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class LauncherDatabase : RoomDatabase() {
     abstract fun appCustomizationDao(): AppCustomizationDao
-
-    companion object {
-        const val DATABASE_NAME = "matrix_launcher.db"
-    }
 }

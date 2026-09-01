@@ -1,17 +1,19 @@
 package com.matrixlauncher.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -30,12 +32,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -55,28 +58,27 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.domain.model.BatteryInfo
 import com.matrixlauncher.domain.model.CalendarEventInfo
+import com.matrixlauncher.domain.model.DotShape
+import com.matrixlauncher.domain.model.HomeWidgetType
+import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.ScreenTimeStats
 import com.matrixlauncher.domain.model.WeatherInfo
-import com.matrixlauncher.ui.graphics.DotMatrixCanvas.calculateDotMatrixTextHeight
-import com.matrixlauncher.ui.graphics.DotMatrixCanvas.calculateDotMatrixTextWidth
+import com.matrixlauncher.ui.graphics.DotMatrixAppIcon
 import com.matrixlauncher.ui.graphics.DotMatrixCanvas.drawDotArrow
-import com.matrixlauncher.ui.graphics.DotMatrixCanvas.drawDotBar
-import com.matrixlauncher.ui.graphics.DotMatrixCanvas.drawDotMatrixText
 import com.matrixlauncher.ui.theme.Black
 import com.matrixlauncher.ui.theme.DarkSurface
 import com.matrixlauncher.ui.theme.DotInactiveColor
-import com.matrixlauncher.ui.theme.DotMatrixTheme
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
 import com.matrixlauncher.ui.theme.OffWhite
 import com.matrixlauncher.ui.theme.SurfaceCard
 import com.matrixlauncher.ui.theme.White
+import com.matrixlauncher.ui.widgets.DotMatrixWidgetsContainer
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -87,11 +89,15 @@ fun HomeScreen(
     screenTimeStats: ScreenTimeStats,
     weatherInfo: WeatherInfo,
     calendarEvent: CalendarEventInfo,
+    isDefaultLauncher: Boolean,
     is24Hour: Boolean,
     showBatteryBar: Boolean,
     showScreenTime: Boolean,
     showScratchpad: Boolean,
     scratchpadNote: String,
+    iconStyle: IconStyle,
+    dotShape: DotShape,
+    enabledWidgets: List<HomeWidgetType>,
     mindfulPendingApp: AppModel?,
     mindfulSecondsRemaining: Int,
     onAppClick: (AppModel) -> Unit,
@@ -102,6 +108,7 @@ fun HomeScreen(
     onConfirmMindfulLaunch: () -> Unit,
     onDoubleTap: () -> Unit,
     onSwipeUpClick: () -> Unit,
+    onSetDefaultLauncherClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     val accent = LocalMatrixAccentColor.current
@@ -135,7 +142,7 @@ fun HomeScreen(
             onClick = onSettingsClick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(16.dp)
+                .padding(12.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Settings,
@@ -147,159 +154,84 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header Area (Clock + Date + Weather + Calendar + Scratchpad)
+            // Header Area (Default Launcher Banner + Customizable Widgets)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                DotMatrixClock(
-                    is24Hour = is24Hour,
-                    batteryInfo = batteryInfo,
-                    showBatteryBar = showBatteryBar
-                )
-
-                // Weather Glance Row
-                if (weatherInfo.isAvailable) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    val weatherText = weatherInfo.formattedString
-                    val wRadius = with(density) { 1.3.dp.toPx() }
-                    val wSpacing = with(density) { 3.8.dp.toPx() }
-                    val wWidth = calculateDotMatrixTextWidth(weatherText.length, wRadius, wSpacing)
-                    val wHeight = calculateDotMatrixTextHeight(wRadius, wSpacing)
-
-                    Canvas(
-                        modifier = Modifier
-                            .width(with(density) { wWidth.toDp() })
-                            .height(with(density) { wHeight.toDp() })
-                    ) {
-                        drawDotMatrixText(
-                            text = weatherText,
-                            topLeft = Offset.Zero,
-                            dotRadius = wRadius,
-                            dotSpacing = wSpacing,
-                            activeColor = OffWhite.copy(alpha = 0.8f),
-                            inactiveColor = DotInactiveColor
-                        )
-                    }
-                }
-
-                // Upcoming Calendar Event Glance
-                if (calendarEvent.hasEvent) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier
-                            .background(SurfaceCard.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                            .clickable(onClick = onCalendarClick)
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarToday,
-                            contentDescription = null,
-                            tint = accent.primaryColor,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = calendarEvent.formattedGlance,
-                            color = White,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1
-                        )
-                    }
-                }
-
-                // Screen Time Quick Glance Bar
-                if (showScreenTime && screenTimeStats.hasPermission) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    val stDotRadius = with(density) { 1.5.dp.toPx() }
-                    val stDotSpacing = with(density) { 6.dp.toPx() }
-                    val stTotalDots = 10
-                    val stActiveDots = (screenTimeStats.progressRatioToSixHours * stTotalDots).toInt()
-                    val stBarWidth = with(density) { ((stTotalDots - 1) * stDotSpacing + stDotRadius * 2).toDp() }
-                    val stBarHeight = with(density) { (stDotRadius * 2).toDp() }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        val stText = "USAGE ${screenTimeStats.formattedDuration}"
-                        val textWidth = calculateDotMatrixTextWidth(stText.length, stDotRadius, stDotSpacing)
-                        val textHeight = calculateDotMatrixTextHeight(stDotRadius, stDotSpacing)
-
-                        Canvas(
-                            modifier = Modifier
-                                .width(with(density) { textWidth.toDp() })
-                                .height(with(density) { textHeight.toDp() })
-                        ) {
-                            drawDotMatrixText(
-                                text = stText,
-                                topLeft = Offset.Zero,
-                                dotRadius = stDotRadius,
-                                dotSpacing = stDotSpacing,
-                                activeColor = OffWhite,
-                                inactiveColor = DotInactiveColor
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Canvas(
-                            modifier = Modifier
-                                .width(stBarWidth)
-                                .height(stBarHeight)
-                        ) {
-                            drawDotBar(
-                                totalDots = stTotalDots,
-                                activeDots = stActiveDots,
-                                topLeft = Offset.Zero,
-                                dotRadius = stDotRadius,
-                                dotSpacing = stDotSpacing,
-                                activeColor = accent.primaryColor,
-                                inactiveColor = DotInactiveColor
-                            )
-                        }
-                    }
-                }
-
-                // Scratchpad Sticky Note
-                if (showScratchpad) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                // Default Launcher Warning & Setup Toggle Banner
+                AnimatedVisibility(
+                    visible = !isDefaultLauncher,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.85f)
-                            .background(SurfaceCard.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-                            .border(1.dp, DotInactiveColor.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                            .clickable { isEditingScratchpad = true }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth(0.92f)
+                            .background(DarkSurface, RoundedCornerShape(6.dp))
+                            .border(1.dp, accent.primaryColor, RoundedCornerShape(6.dp))
+                            .clickable(onClick = onSetDefaultLauncherClick)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
-                        Text(
-                            text = scratchpadNote.uppercase(),
-                            color = accent.primaryColor,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            letterSpacing = 1.sp,
-                            maxLines = 1
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = accent.primaryColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "TAP TO SET AS DEFAULT LAUNCHER",
+                                    color = White,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Text(
+                                text = "[SET]",
+                                color = accent.primaryColor,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Dynamic Dot-Matrix Widgets Module
+                DotMatrixWidgetsContainer(
+                    enabledWidgets = enabledWidgets,
+                    batteryInfo = batteryInfo,
+                    weatherInfo = weatherInfo,
+                    calendarEvent = calendarEvent,
+                    scratchpadNote = scratchpadNote,
+                    is24Hour = is24Hour,
+                    showBatteryBar = showBatteryBar,
+                    onCalendarClick = onCalendarClick,
+                    onScratchpadClick = { isEditingScratchpad = true }
+                )
             }
 
-            // Pinned Favorites List (Center)
+            // Pinned Favorites List (Center with custom stock icons)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                    .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -317,6 +249,8 @@ fun HomeScreen(
                     pinnedFavorites.forEach { app ->
                         FavoriteAppItem(
                             app = app,
+                            iconStyle = iconStyle,
+                            dotShape = dotShape,
                             accentColor = accent,
                             onClick = { onAppClick(app) },
                             onLongClick = { onAppLongClick(app) }
@@ -334,7 +268,7 @@ fun HomeScreen(
                         indication = null,
                         onClick = onSwipeUpClick
                     )
-                    .padding(bottom = 18.dp),
+                    .padding(bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 val arrowRadius = with(density) { 1.5.dp.toPx() }
@@ -355,7 +289,7 @@ fun HomeScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = "APPLICATIONS",
@@ -392,9 +326,12 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FavoriteAppItem(
     app: AppModel,
+    iconStyle: IconStyle,
+    dotShape: DotShape,
     accentColor: AccentColor,
     onClick: () -> Unit,
     onLongClick: () -> Unit
@@ -406,26 +343,34 @@ private fun FavoriteAppItem(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(vertical = 10.dp, horizontal = 16.dp),
+            .padding(vertical = 8.dp, horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Canvas(modifier = Modifier.width(10.dp).height(10.dp)) {
-            drawCircle(
-                color = accentColor.primaryColor,
-                radius = 2.5.dp.toPx(),
-                center = Offset(size.width / 2f, size.height / 2f)
+        if (iconStyle != IconStyle.TEXT_ONLY) {
+            DotMatrixAppIcon(
+                app = app,
+                iconStyle = iconStyle,
+                dotShape = dotShape,
+                sizeDp = 26.dp
             )
+            Spacer(modifier = Modifier.width(14.dp))
+        } else {
+            Canvas(modifier = Modifier.size(8.dp)) {
+                drawCircle(
+                    color = accentColor.primaryColor,
+                    radius = 2.dp.toPx()
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
         }
-
-        Spacer(modifier = Modifier.width(16.dp))
 
         Text(
             text = app.displayLabel.uppercase(),
             color = White,
             fontFamily = FontFamily.Monospace,
-            fontSize = 18.sp,
+            fontSize = 17.sp,
             fontWeight = FontWeight.Medium,
-            letterSpacing = 1.5.sp
+            letterSpacing = 1.2.sp
         )
 
         if (app.isWorkProfile) {
@@ -434,7 +379,7 @@ private fun FavoriteAppItem(
                 text = "[W]",
                 color = accentColor.primaryColor,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
         }

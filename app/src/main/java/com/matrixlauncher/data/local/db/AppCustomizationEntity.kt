@@ -9,5 +9,8 @@ data class AppCustomizationEntity(
     val packageName: String,
     val customLabel: String? = null,
     val isHidden: Boolean = false,
-    val updatedAt: Long = System.currentTimeMillis()
+    val customIconUri: String? = null,
+    val customIconColorHex: String? = null,
+    val customGlyphName: String? = null,
+    val customIconShape: String? = null
 )

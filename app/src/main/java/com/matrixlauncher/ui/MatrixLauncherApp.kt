@@ -20,11 +20,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.ui.common.HapticHelper
 import com.matrixlauncher.ui.drawer.AppDrawerScreen
 import com.matrixlauncher.ui.graphics.DotGridBackground
 import com.matrixlauncher.ui.home.HomeScreen
+import com.matrixlauncher.ui.icons.IconCustomizationScreen
 import com.matrixlauncher.ui.mvi.LauncherEffect
 import com.matrixlauncher.ui.mvi.LauncherIntent
 import com.matrixlauncher.ui.mvi.LauncherScreen
@@ -74,6 +74,9 @@ fun MatrixLauncherApp(
             }
             uiState.currentScreen == LauncherScreen.SETTINGS -> {
                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.HOME))
+            }
+            uiState.currentScreen == LauncherScreen.ICON_STUDIO -> {
+                viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.SETTINGS))
             }
             else -> {
                 // Stay on Home screen
@@ -152,11 +155,15 @@ fun MatrixLauncherApp(
                             screenTimeStats = uiState.screenTimeStats,
                             weatherInfo = uiState.weatherInfo,
                             calendarEvent = uiState.calendarEvent,
+                            isDefaultLauncher = uiState.isDefaultLauncher,
                             is24Hour = uiState.settings.is24HourClock,
                             showBatteryBar = uiState.settings.showBatteryDotBar,
                             showScreenTime = uiState.settings.showScreenTimeGlance,
                             showScratchpad = uiState.settings.showScratchpad,
                             scratchpadNote = uiState.settings.scratchpadNote,
+                            iconStyle = uiState.settings.iconStyle,
+                            dotShape = uiState.settings.dotShape,
+                            enabledWidgets = uiState.settings.enabledWidgets,
                             mindfulPendingApp = uiState.mindfulAppPendingLaunch,
                             mindfulSecondsRemaining = uiState.mindfulSecondsRemaining,
                             onAppClick = { app ->
@@ -183,6 +190,9 @@ fun MatrixLauncherApp(
                             onSwipeUpClick = {
                                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.DRAWER))
                             },
+                            onSetDefaultLauncherClick = {
+                                viewModel.onIntent(LauncherIntent.OpenDefaultLauncherSettings)
+                            },
                             onSettingsClick = {
                                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.SETTINGS))
                             }
@@ -196,6 +206,8 @@ fun MatrixLauncherApp(
                             calculatedResult = uiState.calculatedResult,
                             searchQuery = uiState.searchQuery,
                             autoFocusSearch = uiState.settings.autoFocusSearch,
+                            iconStyle = uiState.settings.iconStyle,
+                            dotShape = uiState.settings.dotShape,
                             scrollerAlignment = uiState.settings.scrollerAlignment,
                             selectedAppForMenu = uiState.selectedAppForMenu,
                             selectedAppShortcuts = uiState.selectedAppShortcuts,
@@ -220,6 +232,9 @@ fun MatrixLauncherApp(
                             },
                             onHideApp = { pkg, hidden ->
                                 viewModel.onIntent(LauncherIntent.SetAppHidden(pkg, hidden))
+                            },
+                            onOpenIconStudio = {
+                                viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.ICON_STUDIO))
                             },
                             onAppInfo = { app ->
                                 viewModel.onIntent(LauncherIntent.OpenAppInfo(app))
@@ -247,6 +262,7 @@ fun MatrixLauncherApp(
                             settings = uiState.settings,
                             screenTimeStats = uiState.screenTimeStats,
                             hiddenApps = uiState.hiddenApps,
+                            isDefaultLauncher = uiState.isDefaultLauncher,
                             onAccentColorChange = { color ->
                                 viewModel.onIntent(LauncherIntent.UpdateAccentColor(color))
                             },
@@ -258,6 +274,15 @@ fun MatrixLauncherApp(
                             },
                             onDotShapeChange = { shape ->
                                 viewModel.onIntent(LauncherIntent.UpdateDotShape(shape))
+                            },
+                            onIconStyleChange = { style ->
+                                viewModel.onIntent(LauncherIntent.UpdateIconStyle(style))
+                            },
+                            onEnabledWidgetsChange = { widgets ->
+                                viewModel.onIntent(LauncherIntent.UpdateEnabledWidgets(widgets))
+                            },
+                            onOpenIconStudio = {
+                                viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.ICON_STUDIO))
                             },
                             onScrollerAlignmentChange = { align ->
                                 viewModel.onIntent(LauncherIntent.UpdateScrollerAlignment(align))
@@ -315,6 +340,26 @@ fun MatrixLauncherApp(
                             },
                             onBackClick = {
                                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.HOME))
+                            }
+                        )
+                    }
+
+                    LauncherScreen.ICON_STUDIO -> {
+                        IconCustomizationScreen(
+                            apps = uiState.allApps,
+                            iconStyle = uiState.settings.iconStyle,
+                            dotShape = uiState.settings.dotShape,
+                            onUpdateAppIcon = { pkg, uri, color, glyph, shape ->
+                                viewModel.onIntent(LauncherIntent.UpdateAppIcon(pkg, uri, color, glyph, shape))
+                            },
+                            onUploadImageForApp = { pkg, uri ->
+                                viewModel.onIntent(LauncherIntent.UploadAppIconImage(pkg, uri))
+                            },
+                            onResetAppIcon = { pkg ->
+                                viewModel.onIntent(LauncherIntent.ResetAppIcon(pkg))
+                            },
+                            onBackClick = {
+                                viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.SETTINGS))
                             }
                         )
                     }

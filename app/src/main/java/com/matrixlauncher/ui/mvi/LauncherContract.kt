@@ -1,5 +1,6 @@
 package com.matrixlauncher.ui.mvi
 
+import android.net.Uri
 import androidx.compose.runtime.Immutable
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.AppModel
@@ -9,6 +10,8 @@ import com.matrixlauncher.domain.model.CalendarEventInfo
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
 import com.matrixlauncher.domain.model.DoubleTapAction
+import com.matrixlauncher.domain.model.HomeWidgetType
+import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.ScrollerAlignment
 import com.matrixlauncher.domain.model.ScreenTimeStats
@@ -20,7 +23,8 @@ import com.matrixlauncher.ui.common.SystemSettingShortcut
 enum class LauncherScreen {
     HOME,
     DRAWER,
-    SETTINGS
+    SETTINGS,
+    ICON_STUDIO
 }
 
 enum class HapticFeedbackType {
@@ -33,6 +37,7 @@ enum class HapticFeedbackType {
 @Immutable
 data class LauncherUiState(
     val isLoading: Boolean = true,
+    val isDefaultLauncher: Boolean = false,
     val allApps: List<AppModel> = emptyList(),
     val hiddenApps: List<AppModel> = emptyList(),
     val pinnedFavorites: List<AppModel> = emptyList(),
@@ -71,7 +76,22 @@ sealed interface LauncherIntent {
     data object OpenDefaultLauncherSettings : LauncherIntent
     data object OpenCalendar : LauncherIntent
 
-    // Enhanced Customizations
+    // Icon Customization Studio
+    data class UpdateIconStyle(val style: IconStyle) : LauncherIntent
+    data class UpdateAppIcon(
+        val packageName: String,
+        val iconUri: String?,
+        val colorHex: String?,
+        val glyphName: String?,
+        val shape: String?
+    ) : LauncherIntent
+    data class UploadAppIconImage(val packageName: String, val uri: Uri) : LauncherIntent
+    data class ResetAppIcon(val packageName: String) : LauncherIntent
+
+    // Widgets Customization
+    data class UpdateEnabledWidgets(val widgets: List<HomeWidgetType>) : LauncherIntent
+
+    // Theme & Enhanced Customizations
     data class UpdateAccentColor(val color: AccentColor) : LauncherIntent
     data class UpdateCustomAccentHex(val hex: String) : LauncherIntent
     data class UpdateDotDensity(val density: DotDensity) : LauncherIntent

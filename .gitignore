@@ -20,4 +20,5 @@ local.properties
 
 # Temp
 .temp/
+.kotlin/
 scripts/*.log

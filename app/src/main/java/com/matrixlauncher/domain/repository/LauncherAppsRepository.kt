@@ -10,6 +10,7 @@ import com.matrixlauncher.domain.model.PackageChangeEvent
 import com.matrixlauncher.domain.model.ScreenTimeStats
 import com.matrixlauncher.domain.model.WeatherInfo
 import kotlinx.coroutines.flow.Flow
+import java.io.InputStream
 
 interface LauncherAppsRepository {
     /**
@@ -48,7 +49,7 @@ interface LauncherAppsRepository {
     fun requestUninstall(app: AppModel)
 
     /**
-     * Stream real-time battery status.
+     * Stream real-time battery status safely.
      */
     fun observeBatteryInfo(): Flow<BatteryInfo>
 
@@ -63,7 +64,7 @@ interface LauncherAppsRepository {
     fun observeWeatherInfo(): Flow<WeatherInfo>
 
     /**
-     * Stream upcoming calendar event.
+     * Stream upcoming calendar event safely with permission checks.
      */
     fun observeUpcomingCalendarEvent(): Flow<CalendarEventInfo>
 
@@ -73,14 +74,19 @@ interface LauncherAppsRepository {
     fun hasUsageStatsPermission(): Boolean
 
     /**
+     * Check if MatrixLauncher is currently the default home launcher.
+     */
+    fun isDefaultLauncher(): Boolean
+
+    /**
+     * Open Android Home Settings or RoleManager dialog to set default launcher.
+     */
+    fun openDefaultLauncherSettings()
+
+    /**
      * Expand the Android system notification shade.
      */
     fun expandNotificationShade()
-
-    /**
-     * Open Android Home Settings to set default launcher.
-     */
-    fun openDefaultLauncherSettings()
 
     /**
      * Toggle device flashlight / torch.
@@ -101,4 +107,9 @@ interface LauncherAppsRepository {
      * Launch browser search URL.
      */
     fun launchWebSearch(url: String)
+
+    /**
+     * Save an uploaded custom PNG/JPEG icon to internal storage and return its file URI string.
+     */
+    suspend fun saveCustomIconImage(packageName: String, inputStream: InputStream): String
 }
