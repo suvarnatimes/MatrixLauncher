@@ -9,13 +9,11 @@ import com.matrixlauncher.domain.model.BatteryInfo
 import com.matrixlauncher.domain.model.CalendarEventInfo
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.DoubleTapAction
 import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.ScrollerAlignment
 import com.matrixlauncher.domain.model.ScreenTimeStats
-import com.matrixlauncher.domain.model.SwipeGestureAction
 import com.matrixlauncher.domain.model.WeatherInfo
 import com.matrixlauncher.domain.model.WebSearchProvider
 import com.matrixlauncher.ui.common.SystemSettingShortcut
@@ -39,6 +37,7 @@ data class LauncherUiState(
     val isLoading: Boolean = true,
     val isDefaultLauncher: Boolean = false,
     val allApps: List<AppModel> = emptyList(),
+    val recentApps: List<AppModel> = emptyList(),
     val hiddenApps: List<AppModel> = emptyList(),
     val pinnedFavorites: List<AppModel> = emptyList(),
     val searchQuery: String = "",
@@ -76,6 +75,15 @@ sealed interface LauncherIntent {
     data object OpenDefaultLauncherSettings : LauncherIntent
     data object OpenCalendar : LauncherIntent
 
+    // Gestures Execution & Configuration
+    data class PerformGestureAction(val actionString: String) : LauncherIntent
+    data class UpdateGestureAction(val gestureKey: String, val actionString: String) : LauncherIntent
+
+    // Widgets Management
+    data class UpdateEnabledWidgets(val widgets: List<HomeWidgetType>) : LauncherIntent
+    data class AddHomeWidget(val widget: HomeWidgetType) : LauncherIntent
+    data class RemoveHomeWidget(val widget: HomeWidgetType) : LauncherIntent
+
     // Icon Customization Studio
     data class UpdateIconStyle(val style: IconStyle) : LauncherIntent
     data class UpdateAppIcon(
@@ -88,18 +96,12 @@ sealed interface LauncherIntent {
     data class UploadAppIconImage(val packageName: String, val uri: Uri) : LauncherIntent
     data class ResetAppIcon(val packageName: String) : LauncherIntent
 
-    // Widgets Customization
-    data class UpdateEnabledWidgets(val widgets: List<HomeWidgetType>) : LauncherIntent
-
-    // Theme & Enhanced Customizations
+    // Theme & Controls
     data class UpdateAccentColor(val color: AccentColor) : LauncherIntent
     data class UpdateCustomAccentHex(val hex: String) : LauncherIntent
     data class UpdateDotDensity(val density: DotDensity) : LauncherIntent
     data class UpdateDotShape(val shape: DotShape) : LauncherIntent
     data class UpdateScrollerAlignment(val alignment: ScrollerAlignment) : LauncherIntent
-    data class UpdateDoubleTapAction(val action: DoubleTapAction) : LauncherIntent
-    data class UpdateSwipeLeftAction(val action: SwipeGestureAction) : LauncherIntent
-    data class UpdateSwipeRightAction(val action: SwipeGestureAction) : LauncherIntent
     data class UpdateSearchProvider(val provider: WebSearchProvider) : LauncherIntent
     data class ToggleTimeFormat(val is24Hour: Boolean) : LauncherIntent
     data class ToggleScreenTime(val show: Boolean) : LauncherIntent
@@ -115,8 +117,6 @@ sealed interface LauncherIntent {
     data class ToggleMindfulApp(val packageName: String) : LauncherIntent
 
     // Power Actions
-    data object PerformDoubleTapAction : LauncherIntent
-    data class PerformSwipeAction(val action: SwipeGestureAction) : LauncherIntent
     data class LaunchWebSearch(val query: String, val provider: WebSearchProvider) : LauncherIntent
     data class LaunchShortcut(val shortcut: SystemSettingShortcut) : LauncherIntent
     data object CancelMindfulLaunch : LauncherIntent

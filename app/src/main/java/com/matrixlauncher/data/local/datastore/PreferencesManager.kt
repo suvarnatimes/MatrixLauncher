@@ -13,12 +13,10 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.DoubleTapAction
 import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.ScrollerAlignment
-import com.matrixlauncher.domain.model.SwipeGestureAction
 import com.matrixlauncher.domain.model.WebSearchProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -43,9 +41,18 @@ class PreferencesManager @Inject constructor(
         val KEY_ICON_STYLE = stringPreferencesKey("icon_style")
         val KEY_ENABLED_WIDGETS = stringSetPreferencesKey("enabled_widgets")
         val KEY_SCROLLER_ALIGNMENT = stringPreferencesKey("scroller_alignment")
-        val KEY_DOUBLE_TAP_ACTION = stringPreferencesKey("double_tap_action")
+
+        // Gestures
+        val KEY_SWIPE_DOWN_ACTION = stringPreferencesKey("swipe_down_action")
+        val KEY_SWIPE_UP_ACTION = stringPreferencesKey("swipe_up_action")
         val KEY_SWIPE_LEFT_ACTION = stringPreferencesKey("swipe_left_action")
         val KEY_SWIPE_RIGHT_ACTION = stringPreferencesKey("swipe_right_action")
+        val KEY_DOUBLE_TAP_ACTION = stringPreferencesKey("double_tap_action")
+        val KEY_PINCH_IN_ACTION = stringPreferencesKey("pinch_in_action")
+        val KEY_PINCH_OUT_ACTION = stringPreferencesKey("pinch_out_action")
+        val KEY_TWO_FINGER_SWIPE_DOWN = stringPreferencesKey("two_finger_swipe_down")
+        val KEY_TWO_FINGER_SWIPE_UP = stringPreferencesKey("two_finger_swipe_up")
+
         val KEY_SEARCH_PROVIDER = stringPreferencesKey("search_provider")
         val KEY_24_HOUR_CLOCK = booleanPreferencesKey("is_24_hour_clock")
         val KEY_SCREEN_TIME_GLANCE = booleanPreferencesKey("show_screen_time")
@@ -96,15 +103,6 @@ class PreferencesManager @Inject constructor(
             val scrollerAlignName = prefs[PreferencesKeys.KEY_SCROLLER_ALIGNMENT] ?: ScrollerAlignment.RIGHT.name
             val scrollerAlign = try { ScrollerAlignment.valueOf(scrollerAlignName) } catch (e: Exception) { ScrollerAlignment.RIGHT }
 
-            val doubleTapName = prefs[PreferencesKeys.KEY_DOUBLE_TAP_ACTION] ?: DoubleTapAction.TOGGLE_TORCH.name
-            val doubleTap = try { DoubleTapAction.valueOf(doubleTapName) } catch (e: Exception) { DoubleTapAction.TOGGLE_TORCH }
-
-            val swipeLeftName = prefs[PreferencesKeys.KEY_SWIPE_LEFT_ACTION] ?: SwipeGestureAction.NONE.name
-            val swipeLeft = try { SwipeGestureAction.valueOf(swipeLeftName) } catch (e: Exception) { SwipeGestureAction.NONE }
-
-            val swipeRightName = prefs[PreferencesKeys.KEY_SWIPE_RIGHT_ACTION] ?: SwipeGestureAction.NONE.name
-            val swipeRight = try { SwipeGestureAction.valueOf(swipeRightName) } catch (e: Exception) { SwipeGestureAction.NONE }
-
             val providerName = prefs[PreferencesKeys.KEY_SEARCH_PROVIDER] ?: WebSearchProvider.DUCK_DUCK_GO.name
             val provider = try { WebSearchProvider.valueOf(providerName) } catch (e: Exception) { WebSearchProvider.DUCK_DUCK_GO }
 
@@ -116,9 +114,15 @@ class PreferencesManager @Inject constructor(
                 iconStyle = iconStyle,
                 enabledWidgets = enabledWidgets,
                 scrollerAlignment = scrollerAlign,
-                doubleTapAction = doubleTap,
-                swipeLeftAction = swipeLeft,
-                swipeRightAction = swipeRight,
+                swipeDownAction = prefs[PreferencesKeys.KEY_SWIPE_DOWN_ACTION] ?: "EXPAND_NOTIFICATIONS",
+                swipeUpAction = prefs[PreferencesKeys.KEY_SWIPE_UP_ACTION] ?: "OPEN_DRAWER",
+                swipeLeftAction = prefs[PreferencesKeys.KEY_SWIPE_LEFT_ACTION] ?: "NONE",
+                swipeRightAction = prefs[PreferencesKeys.KEY_SWIPE_RIGHT_ACTION] ?: "NONE",
+                doubleTapAction = prefs[PreferencesKeys.KEY_DOUBLE_TAP_ACTION] ?: "TOGGLE_TORCH",
+                pinchInAction = prefs[PreferencesKeys.KEY_PINCH_IN_ACTION] ?: "OPEN_SETTINGS",
+                pinchOutAction = prefs[PreferencesKeys.KEY_PINCH_OUT_ACTION] ?: "OPEN_DRAWER",
+                twoFingerSwipeDownAction = prefs[PreferencesKeys.KEY_TWO_FINGER_SWIPE_DOWN] ?: "OPEN_SEARCH",
+                twoFingerSwipeUpAction = prefs[PreferencesKeys.KEY_TWO_FINGER_SWIPE_UP] ?: "OPEN_DRAWER",
                 defaultSearchProvider = provider,
                 is24HourClock = prefs[PreferencesKeys.KEY_24_HOUR_CLOCK] ?: true,
                 showScreenTimeGlance = prefs[PreferencesKeys.KEY_SCREEN_TIME_GLANCE] ?: true,
@@ -143,9 +147,17 @@ class PreferencesManager @Inject constructor(
     suspend fun setIconStyle(style: IconStyle) = edit { it[PreferencesKeys.KEY_ICON_STYLE] = style.name }
     suspend fun setEnabledWidgets(widgets: List<HomeWidgetType>) = edit { it[PreferencesKeys.KEY_ENABLED_WIDGETS] = widgets.map { w -> w.name }.toSet() }
     suspend fun setScrollerAlignment(align: ScrollerAlignment) = edit { it[PreferencesKeys.KEY_SCROLLER_ALIGNMENT] = align.name }
-    suspend fun setDoubleTapAction(action: DoubleTapAction) = edit { it[PreferencesKeys.KEY_DOUBLE_TAP_ACTION] = action.name }
-    suspend fun setSwipeLeftAction(action: SwipeGestureAction) = edit { it[PreferencesKeys.KEY_SWIPE_LEFT_ACTION] = action.name }
-    suspend fun setSwipeRightAction(action: SwipeGestureAction) = edit { it[PreferencesKeys.KEY_SWIPE_RIGHT_ACTION] = action.name }
+
+    suspend fun setSwipeDownAction(action: String) = edit { it[PreferencesKeys.KEY_SWIPE_DOWN_ACTION] = action }
+    suspend fun setSwipeUpAction(action: String) = edit { it[PreferencesKeys.KEY_SWIPE_UP_ACTION] = action }
+    suspend fun setSwipeLeftAction(action: String) = edit { it[PreferencesKeys.KEY_SWIPE_LEFT_ACTION] = action }
+    suspend fun setSwipeRightAction(action: String) = edit { it[PreferencesKeys.KEY_SWIPE_RIGHT_ACTION] = action }
+    suspend fun setDoubleTapAction(action: String) = edit { it[PreferencesKeys.KEY_DOUBLE_TAP_ACTION] = action }
+    suspend fun setPinchInAction(action: String) = edit { it[PreferencesKeys.KEY_PINCH_IN_ACTION] = action }
+    suspend fun setPinchOutAction(action: String) = edit { it[PreferencesKeys.KEY_PINCH_OUT_ACTION] = action }
+    suspend fun setTwoFingerSwipeDownAction(action: String) = edit { it[PreferencesKeys.KEY_TWO_FINGER_SWIPE_DOWN] = action }
+    suspend fun setTwoFingerSwipeUpAction(action: String) = edit { it[PreferencesKeys.KEY_TWO_FINGER_SWIPE_UP] = action }
+
     suspend fun setSearchProvider(provider: WebSearchProvider) = edit { it[PreferencesKeys.KEY_SEARCH_PROVIDER] = provider.name }
     suspend fun set24HourClock(is24Hour: Boolean) = edit { it[PreferencesKeys.KEY_24_HOUR_CLOCK] = is24Hour }
     suspend fun setShowScreenTimeGlance(show: Boolean) = edit { it[PreferencesKeys.KEY_SCREEN_TIME_GLANCE] = show }

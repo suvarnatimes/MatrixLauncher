@@ -15,6 +15,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -85,6 +86,7 @@ import com.matrixlauncher.ui.widgets.DotMatrixWidgetsContainer
 fun HomeScreen(
     modifier: Modifier = Modifier,
     pinnedFavorites: List<AppModel>,
+    recentApps: List<AppModel> = emptyList(),
     batteryInfo: BatteryInfo,
     screenTimeStats: ScreenTimeStats,
     weatherInfo: WeatherInfo,
@@ -107,9 +109,13 @@ fun HomeScreen(
     onCancelMindfulLaunch: () -> Unit,
     onConfirmMindfulLaunch: () -> Unit,
     onDoubleTap: () -> Unit,
+    onPinchIn: () -> Unit,
+    onPinchOut: () -> Unit,
     onSwipeUpClick: () -> Unit,
     onSetDefaultLauncherClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onWidgetRemove: (HomeWidgetType) -> Unit = {},
+    onWidgetAdd: (HomeWidgetType) -> Unit = {}
 ) {
     val accent = LocalMatrixAccentColor.current
     val density = LocalDensity.current
@@ -136,6 +142,16 @@ fun HomeScreen(
                     onDoubleTap = { onDoubleTap() }
                 )
             }
+            .pointerInput(Unit) {
+                // Two-finger pinch-in (zoom < 1) and pinch-out (zoom > 1) detection
+                detectTransformGestures { _, _, zoom, _ ->
+                    if (zoom < 0.85f) {
+                        onPinchIn()
+                    } else if (zoom > 1.15f) {
+                        onPinchOut()
+                    }
+                }
+            }
     ) {
         // Settings Button Top-Right
         IconButton(
@@ -154,11 +170,11 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header Area (Default Launcher Banner + Customizable Widgets)
+            // Header Area (Default Launcher Banner + Responsive Widgets)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -213,15 +229,21 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Dynamic Dot-Matrix Widgets Module
+                // Responsive Dot-Matrix Widgets Module (Interactive Add & Remove)
                 DotMatrixWidgetsContainer(
                     enabledWidgets = enabledWidgets,
+                    recentApps = recentApps,
                     batteryInfo = batteryInfo,
                     weatherInfo = weatherInfo,
                     calendarEvent = calendarEvent,
                     scratchpadNote = scratchpadNote,
                     is24Hour = is24Hour,
                     showBatteryBar = showBatteryBar,
+                    iconStyle = iconStyle,
+                    dotShape = dotShape,
+                    onWidgetRemove = onWidgetRemove,
+                    onWidgetAdd = onWidgetAdd,
+                    onAppClick = onAppClick,
                     onCalendarClick = onCalendarClick,
                     onScratchpadClick = { isEditingScratchpad = true }
                 )
@@ -231,7 +253,7 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 4.dp),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -268,7 +290,7 @@ fun HomeScreen(
                         indication = null,
                         onClick = onSwipeUpClick
                     )
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 val arrowRadius = with(density) { 1.5.dp.toPx() }
@@ -343,7 +365,7 @@ private fun FavoriteAppItem(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(vertical = 8.dp, horizontal = 12.dp),
+            .padding(vertical = 7.dp, horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (iconStyle != IconStyle.TEXT_ONLY) {
@@ -368,7 +390,7 @@ private fun FavoriteAppItem(
             text = app.displayLabel.uppercase(),
             color = White,
             fontFamily = FontFamily.Monospace,
-            fontSize = 17.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = 1.2.sp
         )

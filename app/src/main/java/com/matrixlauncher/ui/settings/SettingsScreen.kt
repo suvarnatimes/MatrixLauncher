@@ -1,7 +1,5 @@
 package com.matrixlauncher.ui.settings
 
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,12 +30,10 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -45,7 +41,6 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -60,7 +55,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -74,15 +68,14 @@ import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.DoubleTapAction
 import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.ScrollerAlignment
 import com.matrixlauncher.domain.model.ScreenTimeStats
-import com.matrixlauncher.domain.model.SwipeGestureAction
 import com.matrixlauncher.domain.model.WebSearchProvider
 import com.matrixlauncher.ui.common.ConfigBackupHelper
+import com.matrixlauncher.ui.graphics.DotMatrixAppIcon
 import com.matrixlauncher.ui.theme.Black
 import com.matrixlauncher.ui.theme.DarkSurface
 import com.matrixlauncher.ui.theme.DividerColor
@@ -97,6 +90,7 @@ import com.matrixlauncher.ui.theme.White
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     settings: LauncherSettings,
+    allApps: List<AppModel> = emptyList(),
     screenTimeStats: ScreenTimeStats,
     hiddenApps: List<AppModel>,
     isDefaultLauncher: Boolean,
@@ -108,9 +102,7 @@ fun SettingsScreen(
     onEnabledWidgetsChange: (List<HomeWidgetType>) -> Unit,
     onOpenIconStudio: () -> Unit,
     onScrollerAlignmentChange: (ScrollerAlignment) -> Unit,
-    onDoubleTapActionChange: (DoubleTapAction) -> Unit,
-    onSwipeLeftActionChange: (SwipeGestureAction) -> Unit,
-    onSwipeRightActionChange: (SwipeGestureAction) -> Unit,
+    onUpdateGestureAction: (gestureKey: String, actionString: String) -> Unit,
     onSearchProviderChange: (WebSearchProvider) -> Unit,
     onToggle24Hour: (Boolean) -> Unit,
     onToggleScreenTime: (Boolean) -> Unit,
@@ -134,6 +126,9 @@ fun SettingsScreen(
     var showImportDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
     var exportedJsonText by remember { mutableStateOf("") }
+
+    // App Picker Dialog for Gestures
+    var gestureKeyForAppPick by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = modifier
@@ -232,7 +227,6 @@ fun SettingsScreen(
                     SettingsSectionHeader(title = "APP ICONS & ICON STUDIO")
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Icon Studio Entry Button
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -263,7 +257,7 @@ fun SettingsScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = "Upload custom PNG/JPEG, pick LED glyphs & colors",
+                                        text = "Upload custom PNG/JPEG, pixelate to LED dots & colors",
                                         color = DotInactiveColor,
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 11.sp
@@ -282,7 +276,6 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Icon Style Selector
                     Text(
                         text = "GLOBAL ICON THEME",
                         color = DotInactiveColor,
@@ -331,7 +324,92 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section 2: DOT-MATRIX WIDGETS MANAGER
+                // Section 2: GESTURES & MULTI-TOUCH CONTROLS (With App Binding)
+                item {
+                    SettingsSectionHeader(title = "GESTURES & MULTI-TOUCH CONTROLS")
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    GestureRowItem(
+                        gestureLabel = "SWIPE DOWN (1 FINGER)",
+                        currentAction = settings.swipeDownAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("SWIPE_DOWN", it) },
+                        onPickApp = { gestureKeyForAppPick = "SWIPE_DOWN" }
+                    )
+
+                    GestureRowItem(
+                        gestureLabel = "SWIPE UP (1 FINGER)",
+                        currentAction = settings.swipeUpAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("SWIPE_UP", it) },
+                        onPickApp = { gestureKeyForAppPick = "SWIPE_UP" }
+                    )
+
+                    GestureRowItem(
+                        gestureLabel = "SWIPE LEFT (1 FINGER)",
+                        currentAction = settings.swipeLeftAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("SWIPE_LEFT", it) },
+                        onPickApp = { gestureKeyForAppPick = "SWIPE_LEFT" }
+                    )
+
+                    GestureRowItem(
+                        gestureLabel = "SWIPE RIGHT (1 FINGER)",
+                        currentAction = settings.swipeRightAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("SWIPE_RIGHT", it) },
+                        onPickApp = { gestureKeyForAppPick = "SWIPE_RIGHT" }
+                    )
+
+                    GestureRowItem(
+                        gestureLabel = "DOUBLE-TAP HOME SCREEN",
+                        currentAction = settings.doubleTapAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("DOUBLE_TAP", it) },
+                        onPickApp = { gestureKeyForAppPick = "DOUBLE_TAP" }
+                    )
+
+                    GestureRowItem(
+                        gestureLabel = "PINCH IN (ZOOM IN - 2 FINGERS)",
+                        currentAction = settings.pinchInAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("PINCH_IN", it) },
+                        onPickApp = { gestureKeyForAppPick = "PINCH_IN" }
+                    )
+
+                    GestureRowItem(
+                        gestureLabel = "PINCH OUT (ZOOM OUT - 2 FINGERS)",
+                        currentAction = settings.pinchOutAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("PINCH_OUT", it) },
+                        onPickApp = { gestureKeyForAppPick = "PINCH_OUT" }
+                    )
+
+                    GestureRowItem(
+                        gestureLabel = "TWO-FINGER SWIPE DOWN",
+                        currentAction = settings.twoFingerSwipeDownAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("TWO_FINGER_SWIPE_DOWN", it) },
+                        onPickApp = { gestureKeyForAppPick = "TWO_FINGER_SWIPE_DOWN" }
+                    )
+
+                    GestureRowItem(
+                        gestureLabel = "TWO-FINGER SWIPE UP",
+                        currentAction = settings.twoFingerSwipeUpAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("TWO_FINGER_SWIPE_UP", it) },
+                        onPickApp = { gestureKeyForAppPick = "TWO_FINGER_SWIPE_UP" }
+                    )
+
+                    SettingsToggleRow(
+                        title = "TACTILE HAPTIC FEEDBACK",
+                        subtitle = "Subtle vibration ticks when navigating and tapping",
+                        checked = settings.hapticsEnabled,
+                        onCheckedChange = onToggleHaptics
+                    )
+                }
+
+                // Section 3: TRENDY DOT-MATRIX WIDGETS MANAGER
                 item {
                     SettingsSectionHeader(title = "TRENDY DOT-MATRIX WIDGETS")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -355,7 +433,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section 3: THEME & COLOR PALETTE
+                // Section 4: THEME & COLOR PALETTE
                 item {
                     SettingsSectionHeader(title = "LED ACCENT COLOR")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -399,7 +477,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section 4: DOT MATRIX GRID & SHAPES
+                // Section 5: DOT MATRIX GRID & SHAPES
                 item {
                     SettingsSectionHeader(title = "DOT MATRIX GRID")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -441,43 +519,6 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    Text(text = "BACKGROUND DENSITY", color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        DotDensity.entries.forEach { density ->
-                            val isSelected = settings.dotDensity == density
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(
-                                        if (isSelected) accent.primaryColor.copy(alpha = 0.2f) else DarkSurface,
-                                        RoundedCornerShape(4.dp)
-                                    )
-                                    .border(
-                                        1.dp,
-                                        if (isSelected) accent.primaryColor else DividerColor,
-                                        RoundedCornerShape(4.dp)
-                                    )
-                                    .clickable { onDotDensityChange(density) }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = density.label,
-                                    color = if (isSelected) accent.primaryColor else White,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
                     SettingsToggleRow(
                         title = "AGSL HARDWARE SHADER",
                         subtitle = "Hardware-accelerated CRT scanlines & breathing wave",
@@ -490,59 +531,6 @@ fun SettingsScreen(
                         subtitle = "Subtle cathode-ray tube horizontal scanlines",
                         checked = settings.enableCrtScanlines,
                         onCheckedChange = onToggleCrtScanlines
-                    )
-                }
-
-                // Section 5: GESTURES & FAST SCROLLER
-                item {
-                    SettingsSectionHeader(title = "GESTURES & CONTROLS")
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    SettingsDropdownRow(
-                        title = "DOUBLE-TAP HOME ACTION",
-                        currentValue = settings.doubleTapAction.label,
-                        options = DoubleTapAction.entries.map { it.label },
-                        onOptionSelected = { label ->
-                            val selected = DoubleTapAction.entries.first { it.label == label }
-                            onDoubleTapActionChange(selected)
-                        }
-                    )
-
-                    SettingsDropdownRow(
-                        title = "SWIPE LEFT ACTION",
-                        currentValue = settings.swipeLeftAction.label,
-                        options = SwipeGestureAction.entries.map { it.label },
-                        onOptionSelected = { label ->
-                            val selected = SwipeGestureAction.entries.first { it.label == label }
-                            onSwipeLeftActionChange(selected)
-                        }
-                    )
-
-                    SettingsDropdownRow(
-                        title = "SWIPE RIGHT ACTION",
-                        currentValue = settings.swipeRightAction.label,
-                        options = SwipeGestureAction.entries.map { it.label },
-                        onOptionSelected = { label ->
-                            val selected = SwipeGestureAction.entries.first { it.label == label }
-                            onSwipeRightActionChange(selected)
-                        }
-                    )
-
-                    SettingsDropdownRow(
-                        title = "DRAWER SCROLLER RAIL",
-                        currentValue = settings.scrollerAlignment.label,
-                        options = ScrollerAlignment.entries.map { it.label },
-                        onOptionSelected = { label ->
-                            val selected = ScrollerAlignment.entries.first { it.label == label }
-                            onScrollerAlignmentChange(selected)
-                        }
-                    )
-
-                    SettingsToggleRow(
-                        title = "TACTILE HAPTIC FEEDBACK",
-                        subtitle = "Subtle vibration ticks when navigating and tapping",
-                        checked = settings.hapticsEnabled,
-                        onCheckedChange = onToggleHaptics
                     )
                 }
 
@@ -562,26 +550,6 @@ fun SettingsScreen(
                         onValueChange = { onMaxFavoritesChange(it.toInt()) },
                         valueRange = 1f..15f,
                         steps = 13,
-                        colors = SliderDefaults.colors(
-                            thumbColor = accent.primaryColor,
-                            activeTrackColor = accent.primaryColor,
-                            inactiveTrackColor = DividerColor
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = "MINDFUL PAUSE DELAY: ${settings.mindfulPauseSeconds}s",
-                        color = White,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp
-                    )
-                    Slider(
-                        value = settings.mindfulPauseSeconds.toFloat(),
-                        onValueChange = { onMindfulPauseChange(it.toInt()) },
-                        valueRange = 0f..15f,
-                        steps = 14,
                         colors = SliderDefaults.colors(
                             thumbColor = accent.primaryColor,
                             activeTrackColor = accent.primaryColor,
@@ -664,6 +632,19 @@ fun SettingsScreen(
 
                 item { Spacer(modifier = Modifier.height(24.dp)) }
             }
+        }
+
+        // App Picker Bottom Sheet for Gestures
+        if (gestureKeyForAppPick != null) {
+            val targetKey = gestureKeyForAppPick!!
+            AppPickerBottomSheet(
+                allApps = allApps,
+                onDismiss = { gestureKeyForAppPick = null },
+                onSelectApp = { app ->
+                    onUpdateGestureAction(targetKey, "APP:${app.packageName}")
+                    gestureKeyForAppPick = null
+                }
+            )
         }
 
         // Hidden Apps Modal Bottom Sheet
@@ -750,6 +731,166 @@ fun SettingsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GestureRowItem(
+    gestureLabel: String,
+    currentAction: String,
+    allApps: List<AppModel>,
+    onActionChange: (String) -> Unit,
+    onPickApp: () -> Unit
+) {
+    val accent = LocalMatrixAccentColor.current
+    var expanded by remember { mutableStateOf(false) }
+
+    val presetOptions = listOf(
+        "OPEN_APP" to "LAUNCH SPECIFIC APP...",
+        "EXPAND_NOTIFICATIONS" to "EXPAND NOTIFICATIONS",
+        "OPEN_DRAWER" to "OPEN APP DRAWER",
+        "OPEN_SEARCH" to "OPEN SEARCH",
+        "OPEN_SETTINGS" to "OPEN SETTINGS",
+        "TOGGLE_TORCH" to "TOGGLE FLASHLIGHT",
+        "OPEN_CAMERA" to "OPEN CAMERA",
+        "LOCK_SCREEN" to "LOCK SCREEN",
+        "NONE" to "DO NOTHING"
+    )
+
+    val currentDisplay = when {
+        currentAction.startsWith("APP:") -> {
+            val pkg = currentAction.removePrefix("APP:")
+            val app = allApps.firstOrNull { it.packageName == pkg }
+            "APP: ${app?.displayLabel?.uppercase() ?: pkg}"
+        }
+        else -> presetOptions.firstOrNull { it.first == currentAction }?.second ?: currentAction
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+    ) {
+        Text(text = gestureLabel, color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor()
+                    .background(DarkSurface, RoundedCornerShape(4.dp))
+                    .border(1.dp, DividerColor, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = currentDisplay, color = White, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                }
+            }
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(DarkSurface)
+            ) {
+                presetOptions.forEach { (actionCode, label) ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = label,
+                                color = if (actionCode == "OPEN_APP") accent.primaryColor else White,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                fontWeight = if (actionCode == "OPEN_APP") FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            if (actionCode == "OPEN_APP") {
+                                onPickApp()
+                            } else {
+                                onActionChange(actionCode)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppPickerBottomSheet(
+    allApps: List<AppModel>,
+    onDismiss: () -> Unit,
+    onSelectApp: (AppModel) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    var search by remember { mutableStateOf("") }
+
+    val filtered = remember(allApps, search) {
+        if (search.isBlank()) allApps
+        else allApps.filter { it.displayLabel.contains(search, ignoreCase = true) }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = DarkSurface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp, start = 20.dp, end = 20.dp)
+        ) {
+            Text(text = "SELECT APP FOR GESTURE", color = White, fontFamily = FontFamily.Monospace, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(SurfaceCard, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                BasicTextField(
+                    value = search,
+                    onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = White, fontFamily = FontFamily.Monospace, fontSize = 13.sp),
+                    decorationBox = { inner ->
+                        if (search.isEmpty()) Text(text = "Search apps...", color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                        inner()
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            LazyColumn(modifier = Modifier.fillMaxWidth().height(350.dp)) {
+                items(filtered) { app ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelectApp(app) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        DotMatrixAppIcon(app = app, sizeDp = 22.dp)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = app.displayLabel.uppercase(), color = White, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun SettingsSectionHeader(title: String) {
     val accent = LocalMatrixAccentColor.current
@@ -792,65 +933,6 @@ private fun SettingsToggleRow(
                 uncheckedTrackColor = DarkSurface
             )
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SettingsDropdownRow(
-    title: String,
-    currentValue: String,
-    options: List<String>,
-    onOptionSelected: (String) -> Unit
-) {
-    val accent = LocalMatrixAccentColor.current
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-    ) {
-        Text(text = title, color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-                    .background(DarkSurface, RoundedCornerShape(4.dp))
-                    .border(1.dp, DividerColor, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = currentValue, color = White, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                }
-            }
-
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(DarkSurface)
-            ) {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(text = option, color = White, fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
-                        onClick = {
-                            onOptionSelected(option)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
     }
 }
 

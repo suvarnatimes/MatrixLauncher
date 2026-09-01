@@ -3,12 +3,10 @@ package com.matrixlauncher.domain.repository
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.DoubleTapAction
 import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.ScrollerAlignment
-import com.matrixlauncher.domain.model.SwipeGestureAction
 import com.matrixlauncher.domain.model.WebSearchProvider
 import kotlinx.coroutines.flow.Flow
 
@@ -21,9 +19,17 @@ interface PreferencesRepository {
     suspend fun setIconStyle(style: IconStyle)
     suspend fun setEnabledWidgets(widgets: List<HomeWidgetType>)
     suspend fun setScrollerAlignment(alignment: ScrollerAlignment)
-    suspend fun setDoubleTapAction(action: DoubleTapAction)
-    suspend fun setSwipeLeftAction(action: SwipeGestureAction)
-    suspend fun setSwipeRightAction(action: SwipeGestureAction)
+
+    suspend fun setSwipeDownAction(action: String)
+    suspend fun setSwipeUpAction(action: String)
+    suspend fun setSwipeLeftAction(action: String)
+    suspend fun setSwipeRightAction(action: String)
+    suspend fun setDoubleTapAction(action: String)
+    suspend fun setPinchInAction(action: String)
+    suspend fun setPinchOutAction(action: String)
+    suspend fun setTwoFingerSwipeDownAction(action: String)
+    suspend fun setTwoFingerSwipeUpAction(action: String)
+
     suspend fun setSearchProvider(provider: WebSearchProvider)
     suspend fun set24HourClock(is24Hour: Boolean)
     suspend fun setShowScreenTimeGlance(show: Boolean)

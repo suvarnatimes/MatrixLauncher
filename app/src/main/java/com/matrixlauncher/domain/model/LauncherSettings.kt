@@ -44,6 +44,8 @@ enum class HomeWidgetType(val title: String, val description: String) {
     TELEMETRY("DEVICE TELEMETRY", "Storage meter, RAM usage, and battery gauge"),
     SCRATCHPAD("QUICK SCRATCHPAD", "Interactive sticky note on your home screen"),
     CALENDAR("CALENDAR AGENDA", "Live upcoming event banner and countdown"),
+    RECENT_APPS("RECENT APPS DOCK", "Quick-access dot matrix row for recent apps"),
+    STATUS_BAR_GLANCE("LED STATUS BAR", "Minimalist status indicators & notification glance"),
     QUOTE("DAILY RETRO QUOTE", "Motivational minimalist dot-matrix quote")
 }
 
@@ -89,10 +91,19 @@ data class LauncherSettings(
         HomeWidgetType.SCRATCHPAD
     ),
     val scrollerAlignment: ScrollerAlignment = ScrollerAlignment.RIGHT,
-    val doubleTapAction: DoubleTapAction = DoubleTapAction.TOGGLE_TORCH,
-    val swipeLeftAction: SwipeGestureAction = SwipeGestureAction.NONE,
-    val swipeRightAction: SwipeGestureAction = SwipeGestureAction.NONE,
     val defaultSearchProvider: WebSearchProvider = WebSearchProvider.DUCK_DUCK_GO,
+
+    // Gesture Action Targets (Can be built-in action string or "APP:packageName")
+    val swipeDownAction: String = "EXPAND_NOTIFICATIONS",
+    val swipeUpAction: String = "OPEN_DRAWER",
+    val swipeLeftAction: String = "NONE",
+    val swipeRightAction: String = "NONE",
+    val doubleTapAction: String = "TOGGLE_TORCH",
+    val pinchInAction: String = "OPEN_SETTINGS",
+    val pinchOutAction: String = "OPEN_DRAWER",
+    val twoFingerSwipeDownAction: String = "OPEN_SEARCH",
+    val twoFingerSwipeUpAction: String = "OPEN_DRAWER",
+
     val is24HourClock: Boolean = true,
     val showScreenTimeGlance: Boolean = true,
     val showBatteryDotBar: Boolean = true,

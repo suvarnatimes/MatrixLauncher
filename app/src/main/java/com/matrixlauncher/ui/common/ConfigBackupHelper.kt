@@ -3,10 +3,8 @@ package com.matrixlauncher.ui.common
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.DoubleTapAction
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.ScrollerAlignment
-import com.matrixlauncher.domain.model.SwipeGestureAction
 import com.matrixlauncher.domain.model.WebSearchProvider
 import org.json.JSONArray
 import org.json.JSONObject
@@ -32,9 +30,15 @@ object ConfigBackupHelper {
             put("dotDensity", settings.dotDensity.name)
             put("dotShape", settings.dotShape.name)
             put("scrollerAlignment", settings.scrollerAlignment.name)
-            put("doubleTapAction", settings.doubleTapAction.name)
-            put("swipeLeftAction", settings.swipeLeftAction.name)
-            put("swipeRightAction", settings.swipeRightAction.name)
+            put("swipeDownAction", settings.swipeDownAction)
+            put("swipeUpAction", settings.swipeUpAction)
+            put("swipeLeftAction", settings.swipeLeftAction)
+            put("swipeRightAction", settings.swipeRightAction)
+            put("doubleTapAction", settings.doubleTapAction)
+            put("pinchInAction", settings.pinchInAction)
+            put("pinchOutAction", settings.pinchOutAction)
+            put("twoFingerSwipeDownAction", settings.twoFingerSwipeDownAction)
+            put("twoFingerSwipeUpAction", settings.twoFingerSwipeUpAction)
             put("defaultSearchProvider", settings.defaultSearchProvider.name)
             put("is24HourClock", settings.is24HourClock)
             put("showScreenTimeGlance", settings.showScreenTimeGlance)
@@ -84,9 +88,6 @@ object ConfigBackupHelper {
             val density = try { DotDensity.valueOf(sObj.optString("dotDensity")) } catch (e: Exception) { DotDensity.STANDARD }
             val shape = try { DotShape.valueOf(sObj.optString("dotShape")) } catch (e: Exception) { DotShape.CIRCLE }
             val scroller = try { ScrollerAlignment.valueOf(sObj.optString("scrollerAlignment")) } catch (e: Exception) { ScrollerAlignment.RIGHT }
-            val doubleTap = try { DoubleTapAction.valueOf(sObj.optString("doubleTapAction")) } catch (e: Exception) { DoubleTapAction.TOGGLE_TORCH }
-            val swipeLeft = try { SwipeGestureAction.valueOf(sObj.optString("swipeLeftAction")) } catch (e: Exception) { SwipeGestureAction.NONE }
-            val swipeRight = try { SwipeGestureAction.valueOf(sObj.optString("swipeRightAction")) } catch (e: Exception) { SwipeGestureAction.NONE }
             val provider = try { WebSearchProvider.valueOf(sObj.optString("defaultSearchProvider")) } catch (e: Exception) { WebSearchProvider.DUCK_DUCK_GO }
 
             val settings = LauncherSettings(
@@ -95,9 +96,15 @@ object ConfigBackupHelper {
                 dotDensity = density,
                 dotShape = shape,
                 scrollerAlignment = scroller,
-                doubleTapAction = doubleTap,
-                swipeLeftAction = swipeLeft,
-                swipeRightAction = swipeRight,
+                swipeDownAction = sObj.optString("swipeDownAction", "EXPAND_NOTIFICATIONS"),
+                swipeUpAction = sObj.optString("swipeUpAction", "OPEN_DRAWER"),
+                swipeLeftAction = sObj.optString("swipeLeftAction", "NONE"),
+                swipeRightAction = sObj.optString("swipeRightAction", "NONE"),
+                doubleTapAction = sObj.optString("doubleTapAction", "TOGGLE_TORCH"),
+                pinchInAction = sObj.optString("pinchInAction", "OPEN_SETTINGS"),
+                pinchOutAction = sObj.optString("pinchOutAction", "OPEN_DRAWER"),
+                twoFingerSwipeDownAction = sObj.optString("twoFingerSwipeDownAction", "OPEN_SEARCH"),
+                twoFingerSwipeUpAction = sObj.optString("twoFingerSwipeUpAction", "OPEN_DRAWER"),
                 defaultSearchProvider = provider,
                 is24HourClock = sObj.optBoolean("is24HourClock", true),
                 showScreenTimeGlance = sObj.optBoolean("showScreenTimeGlance", true),

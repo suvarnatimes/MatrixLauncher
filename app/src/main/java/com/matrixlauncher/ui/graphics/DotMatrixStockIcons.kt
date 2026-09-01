@@ -11,13 +11,13 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.domain.model.DotShape
 import com.matrixlauncher.domain.model.IconStyle
+import com.matrixlauncher.ui.graphics.DotMatrixPixelator.drawPixelatedDotGrid
 import com.matrixlauncher.ui.theme.DotInactiveColor
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
 import java.io.InputStream
@@ -25,8 +25,6 @@ import java.io.InputStream
 object DotMatrixStockIcons {
 
     // 12x12 Dot Matrix Glyphs for Stock Apps
-    // 0 = inactive dot, 1 = active illuminated LED dot
-
     val CAMERA = arrayOf(
         "001111000000",
         "011111100110",
@@ -358,15 +356,16 @@ fun DotMatrixAppIcon(
         }
     }
 
-    // Custom uploaded image bitmap
-    val customBitmap = remember(app.customIconUri) {
+    // Custom uploaded image converted to Dot-Matrix Grid via Pixelator
+    val customPixelGrid = remember(app.customIconUri) {
         if (!app.customIconUri.isNullOrBlank()) {
             try {
                 val uri = Uri.parse(app.customIconUri)
                 val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-                inputStream?.use {
-                    BitmapFactory.decodeStream(it)
-                }
+                val bitmap = inputStream?.use { BitmapFactory.decodeStream(it) }
+                if (bitmap != null) {
+                    DotMatrixPixelator.pixelateToDotGrid(bitmap, gridResolution = 16)
+                } else null
             } catch (e: Exception) {
                 null
             }
@@ -375,11 +374,15 @@ fun DotMatrixAppIcon(
         }
     }
 
-    if (customBitmap != null) {
-        // Draw Custom Uploaded PNG/JPEG Image in canvas frame
-        val imageBitmap = remember(customBitmap) { customBitmap.asImageBitmap() }
+    if (customPixelGrid != null) {
+        // Render Uploaded PNG as Authentic Dot-Matrix Art
         Canvas(modifier = modifier.size(sizeDp)) {
-            drawImage(image = imageBitmap, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()))
+            drawPixelatedDotGrid(
+                grid = customPixelGrid,
+                dotShape = dotShape,
+                activeColor = resolvedColor,
+                inactiveColor = inactiveColor
+            )
         }
         return
     }
@@ -445,13 +448,11 @@ fun DotMatrixAppIcon(
         }
 
         Canvas(modifier = modifier.size(sizeDp)) {
-            // Draw square frame with active monogram dots
             val frameSize = size.width
             val glyph1 = DotMatrixFont.GLYPHS[monogram.firstOrNull()] ?: DotMatrixFont.GLYPHS['#']!!
             val glyph2 = if (monogram.length > 1) DotMatrixFont.GLYPHS[monogram[1]] else null
 
             val totalCols = if (glyph2 != null) 12 else 7
-            val totalRows = 7
 
             val dotSpacing = (frameSize / (totalCols + 1))
             val radius = (dotSpacing * 0.35f)

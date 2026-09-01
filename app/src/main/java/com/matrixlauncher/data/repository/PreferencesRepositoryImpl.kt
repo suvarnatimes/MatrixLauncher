@@ -4,12 +4,10 @@ import com.matrixlauncher.data.local.datastore.PreferencesManager
 import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.DoubleTapAction
 import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.ScrollerAlignment
-import com.matrixlauncher.domain.model.SwipeGestureAction
 import com.matrixlauncher.domain.model.WebSearchProvider
 import com.matrixlauncher.domain.repository.PreferencesRepository
 import kotlinx.coroutines.flow.Flow
@@ -30,9 +28,17 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun setIconStyle(style: IconStyle) = preferencesManager.setIconStyle(style)
     override suspend fun setEnabledWidgets(widgets: List<HomeWidgetType>) = preferencesManager.setEnabledWidgets(widgets)
     override suspend fun setScrollerAlignment(alignment: ScrollerAlignment) = preferencesManager.setScrollerAlignment(alignment)
-    override suspend fun setDoubleTapAction(action: DoubleTapAction) = preferencesManager.setDoubleTapAction(action)
-    override suspend fun setSwipeLeftAction(action: SwipeGestureAction) = preferencesManager.setSwipeLeftAction(action)
-    override suspend fun setSwipeRightAction(action: SwipeGestureAction) = preferencesManager.setSwipeRightAction(action)
+
+    override suspend fun setSwipeDownAction(action: String) = preferencesManager.setSwipeDownAction(action)
+    override suspend fun setSwipeUpAction(action: String) = preferencesManager.setSwipeUpAction(action)
+    override suspend fun setSwipeLeftAction(action: String) = preferencesManager.setSwipeLeftAction(action)
+    override suspend fun setSwipeRightAction(action: String) = preferencesManager.setSwipeRightAction(action)
+    override suspend fun setDoubleTapAction(action: String) = preferencesManager.setDoubleTapAction(action)
+    override suspend fun setPinchInAction(action: String) = preferencesManager.setPinchInAction(action)
+    override suspend fun setPinchOutAction(action: String) = preferencesManager.setPinchOutAction(action)
+    override suspend fun setTwoFingerSwipeDownAction(action: String) = preferencesManager.setTwoFingerSwipeDownAction(action)
+    override suspend fun setTwoFingerSwipeUpAction(action: String) = preferencesManager.setTwoFingerSwipeUpAction(action)
+
     override suspend fun setSearchProvider(provider: WebSearchProvider) = preferencesManager.setSearchProvider(provider)
     override suspend fun set24HourClock(is24Hour: Boolean) = preferencesManager.set24HourClock(is24Hour)
     override suspend fun setShowScreenTimeGlance(show: Boolean) = preferencesManager.setShowScreenTimeGlance(show)

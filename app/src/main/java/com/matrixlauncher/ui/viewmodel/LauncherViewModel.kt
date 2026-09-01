@@ -9,12 +9,10 @@ import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.domain.model.AppShortcutModel
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.DoubleTapAction
 import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.ScrollerAlignment
-import com.matrixlauncher.domain.model.SwipeGestureAction
 import com.matrixlauncher.domain.model.WebSearchProvider
 import com.matrixlauncher.domain.repository.AppDatabaseRepository
 import com.matrixlauncher.domain.repository.LauncherAppsRepository
@@ -97,14 +95,20 @@ class LauncherViewModel @Inject constructor(
             }
             is LauncherIntent.OpenCalendar -> launcherAppsRepository.launchCalendar()
 
+            // Gestures Execution
+            is LauncherIntent.PerformGestureAction -> executeGestureAction(intent.actionString)
+            is LauncherIntent.UpdateGestureAction -> updateGestureAction(intent.gestureKey, intent.actionString)
+
+            // Widgets
+            is LauncherIntent.UpdateEnabledWidgets -> updateEnabledWidgets(intent.widgets)
+            is LauncherIntent.AddHomeWidget -> addHomeWidget(intent.widget)
+            is LauncherIntent.RemoveHomeWidget -> removeHomeWidget(intent.widget)
+
             // Icon Customization Studio
             is LauncherIntent.UpdateIconStyle -> updateIconStyle(intent.style)
             is LauncherIntent.UpdateAppIcon -> updateAppIcon(intent.packageName, intent.iconUri, intent.colorHex, intent.glyphName, intent.shape)
             is LauncherIntent.UploadAppIconImage -> uploadAppIconImage(intent.packageName, intent.uri)
             is LauncherIntent.ResetAppIcon -> resetAppIcon(intent.packageName)
-
-            // Widgets
-            is LauncherIntent.UpdateEnabledWidgets -> updateEnabledWidgets(intent.widgets)
 
             // Theme & Controls
             is LauncherIntent.UpdateAccentColor -> updateAccentColor(intent.color)
@@ -112,9 +116,6 @@ class LauncherViewModel @Inject constructor(
             is LauncherIntent.UpdateDotDensity -> updateDotDensity(intent.density)
             is LauncherIntent.UpdateDotShape -> updateDotShape(intent.shape)
             is LauncherIntent.UpdateScrollerAlignment -> updateScrollerAlignment(intent.alignment)
-            is LauncherIntent.UpdateDoubleTapAction -> updateDoubleTapAction(intent.action)
-            is LauncherIntent.UpdateSwipeLeftAction -> updateSwipeLeftAction(intent.action)
-            is LauncherIntent.UpdateSwipeRightAction -> updateSwipeRightAction(intent.action)
             is LauncherIntent.UpdateSearchProvider -> updateSearchProvider(intent.provider)
             is LauncherIntent.ToggleTimeFormat -> updateTimeFormat(intent.is24Hour)
             is LauncherIntent.ToggleScreenTime -> toggleScreenTime(intent.show)
@@ -130,13 +131,77 @@ class LauncherViewModel @Inject constructor(
             is LauncherIntent.ToggleMindfulApp -> toggleMindfulApp(intent.packageName)
 
             // Actions
-            is LauncherIntent.PerformDoubleTapAction -> handleDoubleTapAction()
-            is LauncherIntent.PerformSwipeAction -> handleSwipeGestureAction(intent.action)
             is LauncherIntent.LaunchWebSearch -> launchWebSearch(intent.query, intent.provider)
             is LauncherIntent.LaunchShortcut -> handleLaunchShortcut(intent.shortcut)
             is LauncherIntent.CancelMindfulLaunch -> cancelMindfulLaunch()
             is LauncherIntent.ConfirmMindfulLaunch -> confirmMindfulLaunch()
             is LauncherIntent.ImportConfig -> importConfig(intent.json)
+        }
+    }
+
+    private fun executeGestureAction(actionString: String) {
+        viewModelScope.launch {
+            emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.TICK))
+            when {
+                actionString.startsWith("APP:") -> {
+                    val pkg = actionString.removePrefix("APP:")
+                    val targetApp = _uiState.value.allApps.firstOrNull { it.packageName == pkg }
+                    if (targetApp != null) {
+                        handleAppLaunchRequest(targetApp)
+                    } else {
+                        emitEffect(LauncherEffect.ShowToast("App not found"))
+                    }
+                }
+                actionString == "EXPAND_NOTIFICATIONS" -> launcherAppsRepository.expandNotificationShade()
+                actionString == "OPEN_DRAWER" -> navigateTo(LauncherScreen.DRAWER)
+                actionString == "OPEN_SEARCH" -> {
+                    _uiState.update { it.copy(currentScreen = LauncherScreen.DRAWER) }
+                }
+                actionString == "OPEN_SETTINGS" -> navigateTo(LauncherScreen.SETTINGS)
+                actionString == "TOGGLE_TORCH" -> {
+                    val isOn = launcherAppsRepository.toggleTorch()
+                    emitEffect(LauncherEffect.ShowToast(if (isOn) "TORCH [ON]" else "TORCH [OFF]"))
+                }
+                actionString == "OPEN_CAMERA" -> launcherAppsRepository.launchCamera()
+                actionString == "LOCK_SCREEN" -> emitEffect(LauncherEffect.ShowToast("Locking screen"))
+                else -> {}
+            }
+        }
+    }
+
+    private fun updateGestureAction(gestureKey: String, actionString: String) = viewModelScope.launch {
+        when (gestureKey) {
+            "SWIPE_DOWN" -> preferencesRepository.setSwipeDownAction(actionString)
+            "SWIPE_UP" -> preferencesRepository.setSwipeUpAction(actionString)
+            "SWIPE_LEFT" -> preferencesRepository.setSwipeLeftAction(actionString)
+            "SWIPE_RIGHT" -> preferencesRepository.setSwipeRightAction(actionString)
+            "DOUBLE_TAP" -> preferencesRepository.setDoubleTapAction(actionString)
+            "PINCH_IN" -> preferencesRepository.setPinchInAction(actionString)
+            "PINCH_OUT" -> preferencesRepository.setPinchOutAction(actionString)
+            "TWO_FINGER_SWIPE_DOWN" -> preferencesRepository.setTwoFingerSwipeDownAction(actionString)
+            "TWO_FINGER_SWIPE_UP" -> preferencesRepository.setTwoFingerSwipeUpAction(actionString)
+        }
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.TICK))
+        emitEffect(LauncherEffect.ShowToast("GESTURE ACTION UPDATED"))
+    }
+
+    private fun addHomeWidget(widget: HomeWidgetType) = viewModelScope.launch {
+        val current = _uiState.value.settings.enabledWidgets.toMutableList()
+        if (!current.contains(widget)) {
+            current.add(widget)
+            preferencesRepository.setEnabledWidgets(current)
+            emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+            emitEffect(LauncherEffect.ShowToast("ADDED ${widget.title}"))
+        }
+    }
+
+    private fun removeHomeWidget(widget: HomeWidgetType) = viewModelScope.launch {
+        val current = _uiState.value.settings.enabledWidgets.toMutableList()
+        if (current.contains(widget)) {
+            current.remove(widget)
+            preferencesRepository.setEnabledWidgets(current)
+            emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+            emitEffect(LauncherEffect.ShowToast("REMOVED ${widget.title}"))
         }
     }
 
@@ -204,6 +269,7 @@ class LauncherViewModel @Inject constructor(
             _uiState.update { current ->
                 current.copy(
                     allApps = visibleApps,
+                    recentApps = visibleApps.take(6),
                     hiddenApps = hiddenList,
                     pinnedFavorites = favorites,
                     filteredApps = filtered,
@@ -350,38 +416,6 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
-    private fun handleDoubleTapAction() {
-        val action = _uiState.value.settings.doubleTapAction
-        viewModelScope.launch {
-            emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.DOUBLE_CLICK))
-            when (action) {
-                DoubleTapAction.NONE -> {}
-                DoubleTapAction.TOGGLE_TORCH -> {
-                    val isOn = launcherAppsRepository.toggleTorch()
-                    emitEffect(LauncherEffect.ShowToast(if (isOn) "TORCH [ON]" else "TORCH [OFF]"))
-                }
-                DoubleTapAction.OPEN_SEARCH -> navigateTo(LauncherScreen.DRAWER)
-                DoubleTapAction.OPEN_SETTINGS -> navigateTo(LauncherScreen.SETTINGS)
-                DoubleTapAction.OPEN_CAMERA -> launcherAppsRepository.launchCamera()
-                DoubleTapAction.LOCK_SCREEN -> {
-                    emitEffect(LauncherEffect.ShowToast("Locking screen"))
-                }
-            }
-        }
-    }
-
-    private fun handleSwipeGestureAction(action: SwipeGestureAction) {
-        viewModelScope.launch {
-            emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.TICK))
-            when (action) {
-                SwipeGestureAction.NONE -> {}
-                SwipeGestureAction.OPEN_CAMERA -> launcherAppsRepository.launchCamera()
-                SwipeGestureAction.OPEN_SEARCH -> navigateTo(LauncherScreen.DRAWER)
-                SwipeGestureAction.OPEN_SETTINGS -> navigateTo(LauncherScreen.SETTINGS)
-            }
-        }
-    }
-
     private fun launchWebSearch(query: String, provider: WebSearchProvider) {
         val encoded = java.net.URLEncoder.encode(query, "UTF-8")
         val fullUrl = "${provider.searchUrl}$encoded"
@@ -489,9 +523,6 @@ class LauncherViewModel @Inject constructor(
     private fun updateDotDensity(density: DotDensity) = viewModelScope.launch { preferencesRepository.setDotDensity(density) }
     private fun updateDotShape(shape: DotShape) = viewModelScope.launch { preferencesRepository.setDotShape(shape) }
     private fun updateScrollerAlignment(alignment: ScrollerAlignment) = viewModelScope.launch { preferencesRepository.setScrollerAlignment(alignment) }
-    private fun updateDoubleTapAction(action: DoubleTapAction) = viewModelScope.launch { preferencesRepository.setDoubleTapAction(action) }
-    private fun updateSwipeLeftAction(action: SwipeGestureAction) = viewModelScope.launch { preferencesRepository.setSwipeLeftAction(action) }
-    private fun updateSwipeRightAction(action: SwipeGestureAction) = viewModelScope.launch { preferencesRepository.setSwipeRightAction(action) }
     private fun updateSearchProvider(provider: WebSearchProvider) = viewModelScope.launch { preferencesRepository.setSearchProvider(provider) }
     private fun updateTimeFormat(is24Hour: Boolean) = viewModelScope.launch { preferencesRepository.set24HourClock(is24Hour) }
     private fun toggleScreenTime(show: Boolean) = viewModelScope.launch { preferencesRepository.setShowScreenTimeGlance(show) }
@@ -514,7 +545,6 @@ class LauncherViewModel @Inject constructor(
                 preferencesRepository.setDotDensity(backup.settings.dotDensity)
                 preferencesRepository.setDotShape(backup.settings.dotShape)
                 preferencesRepository.setScrollerAlignment(backup.settings.scrollerAlignment)
-                preferencesRepository.setDoubleTapAction(backup.settings.doubleTapAction)
                 preferencesRepository.set24HourClock(backup.settings.is24HourClock)
                 preferencesRepository.setMaxFavoritesCount(backup.settings.maxFavoritesCount)
 

@@ -110,21 +110,23 @@ fun MatrixLauncherApp(
                                 orientation = Orientation.Vertical,
                                 onDragStopped = { velocity ->
                                     if (vDragAccumulator < -80f || velocity < -500f) {
-                                        viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.DRAWER))
+                                        viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeUpAction))
                                     } else if (vDragAccumulator > 80f || velocity > 500f) {
-                                        viewModel.onIntent(LauncherIntent.ExpandNotificationShade)
+                                        viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeDownAction))
                                     }
                                     vDragAccumulator = 0f
                                 }
                             )
                             .draggable(
-                                state = hDraggableState,
+                                state = hDragAccumulatorState(hDragAccumulator) { delta ->
+                                    hDragAccumulator += delta
+                                },
                                 orientation = Orientation.Horizontal,
                                 onDragStopped = { velocity ->
                                     if (hDragAccumulator < -80f || velocity < -500f) {
-                                        viewModel.onIntent(LauncherIntent.PerformSwipeAction(uiState.settings.swipeLeftAction))
+                                        viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeLeftAction))
                                     } else if (hDragAccumulator > 80f || velocity > 500f) {
-                                        viewModel.onIntent(LauncherIntent.PerformSwipeAction(uiState.settings.swipeRightAction))
+                                        viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeRightAction))
                                     }
                                     hDragAccumulator = 0f
                                 }
@@ -152,6 +154,7 @@ fun MatrixLauncherApp(
                     LauncherScreen.HOME -> {
                         HomeScreen(
                             pinnedFavorites = uiState.pinnedFavorites,
+                            recentApps = uiState.recentApps,
                             batteryInfo = uiState.batteryInfo,
                             screenTimeStats = uiState.screenTimeStats,
                             weatherInfo = uiState.weatherInfo,
@@ -186,7 +189,13 @@ fun MatrixLauncherApp(
                                 viewModel.onIntent(LauncherIntent.ConfirmMindfulLaunch)
                             },
                             onDoubleTap = {
-                                viewModel.onIntent(LauncherIntent.PerformDoubleTapAction)
+                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.doubleTapAction))
+                            },
+                            onPinchIn = {
+                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.pinchInAction))
+                            },
+                            onPinchOut = {
+                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.pinchOutAction))
                             },
                             onSwipeUpClick = {
                                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.DRAWER))
@@ -196,6 +205,12 @@ fun MatrixLauncherApp(
                             },
                             onSettingsClick = {
                                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.SETTINGS))
+                            },
+                            onWidgetRemove = { widget ->
+                                viewModel.onIntent(LauncherIntent.RemoveHomeWidget(widget))
+                            },
+                            onWidgetAdd = { widget ->
+                                viewModel.onIntent(LauncherIntent.AddHomeWidget(widget))
                             }
                         )
                     }
@@ -261,6 +276,7 @@ fun MatrixLauncherApp(
                     LauncherScreen.SETTINGS -> {
                         SettingsScreen(
                             settings = uiState.settings,
+                            allApps = uiState.allApps,
                             screenTimeStats = uiState.screenTimeStats,
                             hiddenApps = uiState.hiddenApps,
                             isDefaultLauncher = uiState.isDefaultLauncher,
@@ -288,14 +304,8 @@ fun MatrixLauncherApp(
                             onScrollerAlignmentChange = { align ->
                                 viewModel.onIntent(LauncherIntent.UpdateScrollerAlignment(align))
                             },
-                            onDoubleTapActionChange = { action ->
-                                viewModel.onIntent(LauncherIntent.UpdateDoubleTapAction(action))
-                            },
-                            onSwipeLeftActionChange = { action ->
-                                viewModel.onIntent(LauncherIntent.UpdateSwipeLeftAction(action))
-                            },
-                            onSwipeRightActionChange = { action ->
-                                viewModel.onIntent(LauncherIntent.UpdateSwipeRightAction(action))
+                            onUpdateGestureAction = { key, action ->
+                                viewModel.onIntent(LauncherIntent.UpdateGestureAction(key, action))
                             },
                             onSearchProviderChange = { provider ->
                                 viewModel.onIntent(LauncherIntent.UpdateSearchProvider(provider))
@@ -368,4 +378,12 @@ fun MatrixLauncherApp(
             }
         }
     }
+}
+
+@Composable
+private fun hDragAccumulatorState(
+    current: Float,
+    onDelta: (Float) -> Unit
+) = rememberDraggableState { delta ->
+    onDelta(delta)
 }
