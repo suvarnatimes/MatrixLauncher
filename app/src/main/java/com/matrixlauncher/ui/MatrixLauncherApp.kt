@@ -35,7 +35,8 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun MatrixLauncherApp(
-    viewModel: LauncherViewModel
+    viewModel: LauncherViewModel,
+    onRequestSetDefaultLauncher: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -133,7 +134,7 @@ fun MatrixLauncherApp(
                     }
                 )
         ) {
-            // Procedural Dot Grid Background
+            // High-Performance Cached Dot Grid Background
             DotGridBackground(
                 dotDensity = uiState.settings.dotDensity,
                 dotShape = uiState.settings.dotShape,
@@ -191,7 +192,7 @@ fun MatrixLauncherApp(
                                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.DRAWER))
                             },
                             onSetDefaultLauncherClick = {
-                                viewModel.onIntent(LauncherIntent.OpenDefaultLauncherSettings)
+                                onRequestSetDefaultLauncher()
                             },
                             onSettingsClick = {
                                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.SETTINGS))
@@ -336,7 +337,7 @@ fun MatrixLauncherApp(
                                 viewModel.onIntent(LauncherIntent.ImportConfig(json))
                             },
                             onSetDefaultLauncher = {
-                                viewModel.onIntent(LauncherIntent.OpenDefaultLauncherSettings)
+                                onRequestSetDefaultLauncher()
                             },
                             onBackClick = {
                                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.HOME))

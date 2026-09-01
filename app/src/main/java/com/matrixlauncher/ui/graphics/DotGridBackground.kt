@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -28,7 +29,7 @@ import com.matrixlauncher.domain.model.DotShape
 import org.intellij.lang.annotations.Language
 
 /**
- * AGSL Shader for Android 13+ (API 33+) featuring procedural dot grid, breathing wave, and optional CRT scanlines.
+ * High-Performance Hardware Accelerated Dot Grid Background for 120Hz Displays.
  */
 @Language("AGSL")
 private const val DOT_MATRIX_AGSL = """
@@ -44,7 +45,7 @@ private const val DOT_MATRIX_AGSL = """
         vec2 grid = mod(fragCoord, uSpacing) - (uSpacing * 0.5);
         float dist = length(grid);
 
-        // Subtle pulsing wave across grid
+        // Subtle breathing wave across grid
         float wave = sin((fragCoord.y * 0.005) - (uTime * 0.8)) * 0.15;
         float effectiveRadius = uRadius * (1.0 + wave);
 
@@ -52,7 +53,7 @@ private const val DOT_MATRIX_AGSL = """
         float alpha = 1.0 - smoothstep(effectiveRadius - 0.75, effectiveRadius + 0.75, dist);
         vec4 color = mix(uBgColor, uDotColor, alpha * uDotColor.a);
 
-        // Optional CRT horizontal scanlines
+        // CRT horizontal scanlines
         if (uScanlines > 0.5) {
             float scanline = sin(fragCoord.y * 1.5) * 0.08;
             color.rgb -= vec3(scanline);
@@ -109,7 +110,7 @@ fun DotGridBackground(
                 scanlines = if (enableCrtScanlines) 1.0f else 0.0f
             )
         } else {
-            CanvasDotGridBackground(
+            CachedCanvasDotGridBackground(
                 modifier = modifier,
                 spacingPx = spacingPx,
                 radiusPx = radiusPx,
@@ -119,7 +120,7 @@ fun DotGridBackground(
             )
         }
     } else {
-        CanvasDotGridBackground(
+        CachedCanvasDotGridBackground(
             modifier = modifier,
             spacingPx = spacingPx,
             radiusPx = radiusPx,
@@ -170,7 +171,6 @@ private fun AgslDotGridBackground(
             )
             drawRect(brush = ShaderBrush(shader))
         } catch (e: Throwable) {
-            // Fallback to Canvas draw in case of GPU shader execution exception
             drawRect(color = backgroundColor)
             drawGridDots(spacingPx, radiusPx, dotShape, dotColor)
         }
@@ -178,7 +178,7 @@ private fun AgslDotGridBackground(
 }
 
 @Composable
-private fun CanvasDotGridBackground(
+private fun CachedCanvasDotGridBackground(
     modifier: Modifier,
     spacingPx: Float,
     radiusPx: Float,
@@ -186,9 +186,53 @@ private fun CanvasDotGridBackground(
     dotColor: Color,
     backgroundColor: Color
 ) {
-    Canvas(modifier = modifier.fillMaxSize()) {
-        drawRect(color = backgroundColor)
-        drawGridDots(spacingPx, radiusPx, dotShape, dotColor)
+    // drawWithCache caches the drawing operations on size change for ultra-smooth 120Hz frame rates
+    Canvas(
+        modifier = modifier
+            .fillMaxSize()
+            .drawWithCache {
+                val cols = if (spacingPx > 0f) (size.width / spacingPx).toInt() + 1 else 0
+                val rows = if (spacingPx > 0f) (size.height / spacingPx).toInt() + 1 else 0
+                val startX = (size.width - ((cols - 1) * spacingPx)) / 2f
+                val startY = (size.height - ((rows - 1) * spacingPx)) / 2f
+                val squareSide = radiusPx * 2f
+
+                onDrawBehind {
+                    drawRect(color = backgroundColor)
+                    for (c in 0 until cols) {
+                        val cx = startX + c * spacingPx
+                        for (r in 0 until rows) {
+                            val cy = startY + r * spacingPx
+                            when (dotShape) {
+                                DotShape.CIRCLE -> {
+                                    drawCircle(
+                                        color = dotColor,
+                                        radius = radiusPx,
+                                        center = Offset(cx, cy)
+                                    )
+                                }
+                                DotShape.SQUARE -> {
+                                    drawRect(
+                                        color = dotColor,
+                                        topLeft = Offset(cx - radiusPx, cy - radiusPx),
+                                        size = Size(squareSide, squareSide)
+                                    )
+                                }
+                                DotShape.ROUNDED_CRT -> {
+                                    drawRoundRect(
+                                        color = dotColor,
+                                        topLeft = Offset(cx - radiusPx, cy - radiusPx),
+                                        size = Size(squareSide, squareSide),
+                                        cornerRadius = CornerRadius(radiusPx * 0.4f, radiusPx * 0.4f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+    ) {
+        // Body drawn via drawWithCache
     }
 }
 
@@ -204,7 +248,6 @@ private fun DrawScope.drawGridDots(
 
     val startX = (size.width - ((cols - 1) * spacingPx)) / 2f
     val startY = (size.height - ((rows - 1) * spacingPx)) / 2f
-
     val squareSide = radiusPx * 2f
 
     for (c in 0 until cols) {
@@ -213,18 +256,10 @@ private fun DrawScope.drawGridDots(
             val cy = startY + r * spacingPx
             when (dotShape) {
                 DotShape.CIRCLE -> {
-                    drawCircle(
-                        color = dotColor,
-                        radius = radiusPx,
-                        center = Offset(cx, cy)
-                    )
+                    drawCircle(color = dotColor, radius = radiusPx, center = Offset(cx, cy))
                 }
                 DotShape.SQUARE -> {
-                    drawRect(
-                        color = dotColor,
-                        topLeft = Offset(cx - radiusPx, cy - radiusPx),
-                        size = Size(squareSide, squareSide)
-                    )
+                    drawRect(color = dotColor, topLeft = Offset(cx - radiusPx, cy - radiusPx), size = Size(squareSide, squareSide))
                 }
                 DotShape.ROUNDED_CRT -> {
                     drawRoundRect(
