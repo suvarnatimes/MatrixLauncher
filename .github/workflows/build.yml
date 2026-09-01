@@ -1,0 +1,85 @@
+name: Build MatrixLauncher APK
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'           # triggers on v1.0, v1.0.1, etc.
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:   # allows manual run from GitHub UI
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Accept Android SDK Licenses
+        run: |
+          mkdir -p "$HOME/Android/Sdk/licenses"
+          printf "\n24333f8a63cbd8324867c90d4f88eab7173a0b04\nd56f5187479451eabf01fb787143c00f31f437e1\n89337d125679718437f48a1c0bdafc7e043b5dd4\n" \
+            > "$HOME/Android/Sdk/licenses/android-sdk-license"
+          printf "\n84831b9409646a918e30573bab4c9c91346d8abd\n" \
+            > "$HOME/Android/Sdk/licenses/android-sdk-preview-license"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+
+      - name: Rename APK with version
+        run: |
+          VERSION="${{ github.ref_name }}"
+          if [[ "$VERSION" == refs/* ]]; then VERSION="dev"; fi
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             app/build/outputs/apk/debug/MatrixLauncher-${VERSION}-debug.apk
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MatrixLauncher-Debug-APK
+          path: app/build/outputs/apk/debug/MatrixLauncher-*-debug.apk
+          retention-days: 30
+
+      # Only runs when you push a tag like v1.0
+      - name: Create GitHub Release with APK
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "MatrixLauncher ${{ github.ref_name }}"
+          body: |
+            ## MatrixLauncher ${{ github.ref_name }} — Test Build
+
+            ### How to install
+            1. Download the `.apk` file below.
+            2. Transfer it to your Android phone.
+            3. On your phone, tap the file and allow **"Install from unknown sources"**.
+            4. Done! MatrixLauncher is installed.
+
+            ### What's inside
+            - Retro dot-matrix LED home screen
+            - Universal search + in-line calculator
+            - Dynamic app shortcuts on long-press
+            - Weather & calendar glance
+            - CRT scanline shader (Android 13+)
+            - Mindful pause, scratchpad, hidden apps
+          files: app/build/outputs/apk/debug/MatrixLauncher-*-debug.apk
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

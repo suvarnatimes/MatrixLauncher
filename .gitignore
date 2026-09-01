@@ -1,0 +1,23 @@
+# Gradle build outputs
+.gradle/
+build/
+app/build/
+
+# Local properties (SDK path, signing keys)
+local.properties
+*.jks
+*.keystore
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+
+# Android Studio navigation editor
+.navigation/
+
+# Temp
+.temp/
+scripts/*.log

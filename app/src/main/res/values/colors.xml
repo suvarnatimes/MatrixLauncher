@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="dot_inactive">#FF181818</color>
+    <color name="accent_crimson">#FFFF2E2E</color>
+    <color name="accent_amber">#FFFFAA00</color>
+    <color name="accent_emerald">#FF00E676</color>
+    <color name="accent_monochrome">#FFE0E0E0</color>
+</resources>

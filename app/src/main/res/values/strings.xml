@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">Matrix Launcher</string>
+    <string name="search_apps_hint">SEARCH SYSTEM_</string>
+    <string name="favorites_header">PINNED APPS</string>
+    <string name="all_apps_header">ALL APPLICATIONS</string>
+    <string name="settings_title">SETTINGS</string>
+    <string name="accent_color">ACCENT COLOR</string>
+    <string name="grid_density">GRID DENSITY</string>
+    <string name="time_format">TIME FORMAT</string>
+    <string name="time_24h">24-HOUR CLOCK</string>
+    <string name="time_12h">12-HOUR CLOCK</string>
+    <string name="screen_time_glance">DAILY SCREEN TIME</string>
+    <string name="haptic_feedback">HAPTIC FEEDBACK</string>
+    <string name="shader_effects">AGSL MATRIX SHADER</string>
+    <string name="hidden_apps">HIDDEN APPS</string>
+    <string name="set_default_launcher">SET AS DEFAULT LAUNCHER</string>
+    <string name="pin_to_home">PIN TO HOME</string>
+    <string name="unpin_from_home">UNPIN FROM HOME</string>
+    <string name="rename_app">RENAME APP</string>
+    <string name="hide_app">HIDE APP</string>
+    <string name="unhide_app">UNHIDE APP</string>
+    <string name="app_info">APP INFO</string>
+    <string name="uninstall">UNINSTALL</string>
+    <string name="grant_permission">GRANT PERMISSION</string>
+    <string name="usage_stats_description">Enable Usage Access in Android Settings to calculate daily screen time dot bar metrics.</string>
+</resources>
