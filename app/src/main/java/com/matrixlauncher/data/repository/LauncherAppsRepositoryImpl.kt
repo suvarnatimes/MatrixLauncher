@@ -22,6 +22,8 @@ import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
@@ -62,36 +64,59 @@ class LauncherAppsRepositoryImpl @Inject constructor(
 
     private val launcherApps: LauncherApps? = try {
         context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
         null
     }
 
     private val userManager: UserManager? = try {
         context.getSystemService(Context.USER_SERVICE) as? UserManager
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
         null
     }
 
     private val packageManager: PackageManager = context.packageManager
-    private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-    private val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
+    private val usageStatsManager = try {
+        context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+    } catch (e: Throwable) {
+        null
+    }
+
+    private val batteryManager = try {
+        context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+    } catch (e: Throwable) {
+        null
+    }
+
+    private val cameraManager = try {
+        context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
+    } catch (e: Throwable) {
+        null
+    }
 
     private var isTorchOn = false
 
     override suspend fun getInstalledApps(): List<AppModel> = withContext(Dispatchers.IO) {
         val appList = mutableListOf<AppModel>()
         val currentUserHandle = Process.myUserHandle()
-        val userProfiles = userManager?.userProfiles ?: listOf(currentUserHandle)
+        val userProfiles = try {
+            userManager?.userProfiles ?: listOf(currentUserHandle)
+        } catch (e: Throwable) {
+            listOf(currentUserHandle)
+        }
 
         var loadedViaLauncherApps = false
 
         if (launcherApps != null) {
             for (profile in userProfiles) {
-                val userSerial = userManager?.getSerialNumberForUser(profile) ?: 0L
+                val userSerial = try {
+                    userManager?.getSerialNumberForUser(profile) ?: 0L
+                } catch (e: Throwable) {
+                    0L
+                }
                 val isWorkProfile = profile != currentUserHandle
                 val activities: List<LauncherActivityInfo> = try {
                     launcherApps.getActivityList(null, profile)
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     emptyList()
                 }
 
@@ -108,13 +133,13 @@ class LauncherAppsRepositoryImpl @Inject constructor(
                     val appModel = AppModel(
                         packageName = pkgName,
                         activityName = activity.componentName.className,
-                        label = activity.label.toString(),
+                        label = activity.label?.toString() ?: pkgName,
                         userHandle = profile,
                         userSerial = userSerial,
                         isWorkProfile = isWorkProfile,
                         installTime = try {
                             activity.firstInstallTime
-                        } catch (e: Exception) {
+                        } catch (e: Throwable) {
                             0L
                         }
                     )
@@ -123,7 +148,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
             }
         }
 
-        // Fallback using PackageManager queryIntentActivities if LauncherApps was restricted or empty
+        // Robust fallback using PackageManager queryIntentActivities
         if (!loadedViaLauncherApps || appList.isEmpty()) {
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
@@ -138,7 +163,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
                     @Suppress("DEPRECATION")
                     packageManager.queryIntentActivities(mainIntent, 0)
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 emptyList()
             }
 
@@ -148,7 +173,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
 
                 val label = try {
                     resolveInfo.loadLabel(packageManager).toString()
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     pkgName
                 }
 
@@ -206,15 +231,16 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         }
 
         try {
-            launcherApps.registerCallback(callback)
-        } catch (e: Exception) {
+            val mainHandler = Handler(Looper.getMainLooper())
+            launcherApps.registerCallback(callback, mainHandler)
+        } catch (e: Throwable) {
             // Ignore if callback registration not permitted
         }
 
         awaitClose {
             try {
                 launcherApps.unregisterCallback(callback)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 // Ignore
             }
         }
@@ -232,7 +258,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
                 try {
                     launcherApps.startMainActivity(component, user, sourceBounds, opts)
                     return@runCatching
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     // Fallback to PackageManager launch
                 }
             }
@@ -270,7 +296,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
                     isPinned = shortcut.isPinned
                 )
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             emptyList()
         }
     }
@@ -289,12 +315,14 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         val user = app.userHandle ?: Process.myUserHandle()
         try {
             launcherApps?.startAppDetailsActivity(component, user, null, null)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                 data = Uri.fromParts("package", app.packageName, null)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            context.startActivity(intent)
+            try {
+                context.startActivity(intent)
+            } catch (ignored: Throwable) {}
         }
     }
 
@@ -303,10 +331,30 @@ class LauncherAppsRepositoryImpl @Inject constructor(
             data = Uri.fromParts("package", app.packageName, null)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        context.startActivity(intent)
+        try {
+            context.startActivity(intent)
+        } catch (ignored: Throwable) {}
     }
 
     override fun observeBatteryInfo(): Flow<BatteryInfo> = callbackFlow {
+        // First, directly query BatteryManager property safely
+        val initialCapacity = try {
+            batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
+        } catch (e: Throwable) {
+            -1
+        }
+        val isChargingDirect = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                batteryManager?.isCharging == true
+            } else false
+        } catch (e: Throwable) {
+            false
+        }
+
+        if (initialCapacity in 0..100) {
+            trySend(BatteryInfo(level = initialCapacity, isCharging = isChargingDirect))
+        }
+
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
                 if (intent == null) return
@@ -330,41 +378,44 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         }
 
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        val initialIntent = try {
-            ContextCompat.registerReceiver(
+        var isRegistered = false
+        try {
+            val registeredIntent = ContextCompat.registerReceiver(
                 context,
                 receiver,
                 filter,
                 ContextCompat.RECEIVER_EXPORTED
             )
-        } catch (e: Exception) {
-            null
-        }
-
-        if (initialIntent != null) {
-            val level = initialIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-            val scale = initialIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-            val status = initialIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-            val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                    status == BatteryManager.BATTERY_STATUS_FULL
-            val batteryPct = if (level >= 0 && scale > 0) {
-                ((level.toFloat() / scale.toFloat()) * 100).toInt()
-            } else {
-                100
-            }
-            trySend(
-                BatteryInfo(
-                    level = batteryPct.coerceIn(0, 100),
-                    isCharging = isCharging
+            isRegistered = true
+            if (registeredIntent != null) {
+                val level = registeredIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = registeredIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                val status = registeredIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                        status == BatteryManager.BATTERY_STATUS_FULL
+                val batteryPct = if (level >= 0 && scale > 0) {
+                    ((level.toFloat() / scale.toFloat()) * 100).toInt()
+                } else {
+                    100
+                }
+                trySend(
+                    BatteryInfo(
+                        level = batteryPct.coerceIn(0, 100),
+                        isCharging = isCharging
+                    )
                 )
-            )
+            }
+        } catch (e: Throwable) {
+            // If registerReceiver fails, fallback is already emitted via batteryManager
         }
 
         awaitClose {
-            try {
-                context.unregisterReceiver(receiver)
-            } catch (e: Exception) {
-                // Ignore
+            if (isRegistered) {
+                try {
+                    context.unregisterReceiver(receiver)
+                } catch (e: Throwable) {
+                    // Ignore
+                }
             }
         }
     }
@@ -376,39 +427,42 @@ class LauncherAppsRepositoryImpl @Inject constructor(
             return@flow
         }
 
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val startTime = calendar.timeInMillis
-        val endTime = System.currentTimeMillis()
+        try {
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val startTime = calendar.timeInMillis
+            val endTime = System.currentTimeMillis()
 
-        val usageStats = try {
-            usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY,
-                startTime,
-                endTime
+            val usageStats = try {
+                usageStatsManager.queryUsageStats(
+                    UsageStatsManager.INTERVAL_DAILY,
+                    startTime,
+                    endTime
+                )
+            } catch (e: Throwable) {
+                emptyList()
+            }
+
+            val totalTime = usageStats?.sumOf { it.totalTimeInForeground } ?: 0L
+            val topApp = usageStats?.maxByOrNull { it.totalTimeInForeground }?.packageName
+
+            emit(
+                ScreenTimeStats(
+                    totalMillisToday = totalTime,
+                    hasPermission = true,
+                    topAppPackage = topApp
+                )
             )
-        } catch (e: Exception) {
-            emptyList()
+        } catch (e: Throwable) {
+            emit(ScreenTimeStats(totalMillisToday = 0L, hasPermission = false))
         }
-
-        val totalTime = usageStats?.sumOf { it.totalTimeInForeground } ?: 0L
-        val topApp = usageStats?.maxByOrNull { it.totalTimeInForeground }?.packageName
-
-        emit(
-            ScreenTimeStats(
-                totalMillisToday = totalTime,
-                hasPermission = true,
-                topAppPackage = topApp
-            )
-        )
     }
 
     override fun observeWeatherInfo(): Flow<WeatherInfo> = flow {
-        // High-efficiency local dot-matrix telemetry
         emit(
             WeatherInfo(
                 temperatureCelsius = 24,
@@ -420,10 +474,14 @@ class LauncherAppsRepositoryImpl @Inject constructor(
     }
 
     override fun observeUpcomingCalendarEvent(): Flow<CalendarEventInfo> = flow {
-        val hasCalendarPermission = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.READ_CALENDAR
-        ) == PackageManager.PERMISSION_GRANTED
+        val hasCalendarPermission = try {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_CALENDAR
+            ) == PackageManager.PERMISSION_GRANTED
+        } catch (e: Throwable) {
+            false
+        }
 
         if (!hasCalendarPermission) {
             emit(CalendarEventInfo(hasEvent = false))
@@ -475,77 +533,83 @@ class LauncherAppsRepositoryImpl @Inject constructor(
                 cursor?.close()
                 emit(CalendarEventInfo(hasEvent = false))
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             emit(CalendarEventInfo(hasEvent = false))
         }
     }
 
     override fun hasUsageStatsPermission(): Boolean {
-        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
-        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            appOps.unsafeCheckOpNoThrow(
-                AppOpsManager.OPSTR_GET_USAGE_STATS,
-                Process.myUid(),
-                context.packageName
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            appOps.checkOpNoThrow(
-                AppOpsManager.OPSTR_GET_USAGE_STATS,
-                Process.myUid(),
-                context.packageName
-            )
+        return try {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(),
+                    context.packageName
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(),
+                    context.packageName
+                )
+            }
+            mode == AppOpsManager.MODE_ALLOWED
+        } catch (e: Throwable) {
+            false
         }
-        return mode == AppOpsManager.MODE_ALLOWED
     }
 
     override fun isDefaultLauncher(): Boolean {
-        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_HOME)
+        return try {
+            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+            }
+            val resolveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.resolveActivity(homeIntent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()))
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            }
+            resolveInfo?.activityInfo?.packageName == context.packageName
+        } catch (e: Throwable) {
+            false
         }
-        val resolveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.resolveActivity(homeIntent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()))
-        } else {
-            @Suppress("DEPRECATION")
-            packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
-        }
-        return resolveInfo?.activityInfo?.packageName == context.packageName
     }
 
     override fun openDefaultLauncherSettings() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
-            if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_HOME)) {
-                if (!roleManager.isRoleHeld(RoleManager.ROLE_HOME)) {
-                    val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    try {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
+                if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_HOME)) {
+                    if (!roleManager.isRoleHeld(RoleManager.ROLE_HOME)) {
+                        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
                         context.startActivity(intent)
                         return
-                    } catch (e: Exception) {
-                        // Fallback
                     }
                 }
             }
-        }
 
-        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            } else {
+                Intent(Settings.ACTION_HOME_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
             }
-        } else {
-            Intent(Settings.ACTION_HOME_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-        }
-        try {
             context.startActivity(intent)
-        } catch (e: Exception) {
-            val fallback = Intent(Settings.ACTION_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(fallback)
+        } catch (e: Throwable) {
+            try {
+                val fallback = Intent(Settings.ACTION_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(fallback)
+            } catch (ignored: Throwable) {}
         }
     }
 
@@ -556,7 +620,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
             val statusBarManagerClass = Class.forName("android.app.StatusBarManager")
             val expandMethod = statusBarManagerClass.getMethod("expandNotificationsPanel")
             expandMethod.invoke(statusBarService)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Fallback
         }
     }
@@ -568,7 +632,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
             isTorchOn = !isTorchOn
             cameraManager.setTorchMode(cameraId, isTorchOn)
             isTorchOn
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             false
         }
     }
@@ -579,7 +643,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         }
         try {
             context.startActivity(intent)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Fallback
         }
     }
@@ -591,14 +655,14 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         }
         try {
             context.startActivity(intent)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             val fallback = Intent(Intent.ACTION_VIEW).apply {
                 data = Uri.parse("content://com.android.calendar/time")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             try {
                 context.startActivity(fallback)
-            } catch (ignored: Exception) {}
+            } catch (ignored: Throwable) {}
         }
     }
 
@@ -608,7 +672,7 @@ class LauncherAppsRepositoryImpl @Inject constructor(
         }
         try {
             context.startActivity(intent)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Fallback
         }
     }

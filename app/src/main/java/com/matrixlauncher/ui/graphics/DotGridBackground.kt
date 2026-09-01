@@ -88,15 +88,36 @@ fun DotGridBackground(
     )
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && enableShader) {
-        AgslDotGridBackground(
-            modifier = modifier,
-            spacingPx = spacingPx,
-            radiusPx = radiusPx,
-            dotColor = dotColor,
-            backgroundColor = backgroundColor,
-            time = time,
-            scanlines = if (enableCrtScanlines) 1.0f else 0.0f
-        )
+        val shader = remember {
+            try {
+                RuntimeShader(DOT_MATRIX_AGSL)
+            } catch (e: Throwable) {
+                null
+            }
+        }
+
+        if (shader != null) {
+            AgslDotGridBackground(
+                shader = shader,
+                modifier = modifier,
+                spacingPx = spacingPx,
+                radiusPx = radiusPx,
+                dotShape = dotShape,
+                dotColor = dotColor,
+                backgroundColor = backgroundColor,
+                time = time,
+                scanlines = if (enableCrtScanlines) 1.0f else 0.0f
+            )
+        } else {
+            CanvasDotGridBackground(
+                modifier = modifier,
+                spacingPx = spacingPx,
+                radiusPx = radiusPx,
+                dotShape = dotShape,
+                dotColor = dotColor,
+                backgroundColor = backgroundColor
+            )
+        }
     } else {
         CanvasDotGridBackground(
             modifier = modifier,
@@ -112,42 +133,47 @@ fun DotGridBackground(
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 private fun AgslDotGridBackground(
+    shader: RuntimeShader,
     modifier: Modifier,
     spacingPx: Float,
     radiusPx: Float,
+    dotShape: DotShape,
     dotColor: Color,
     backgroundColor: Color,
     time: Float,
     scanlines: Float
 ) {
-    val shader = remember { RuntimeShader(DOT_MATRIX_AGSL) }
-
     Canvas(modifier = modifier.fillMaxSize()) {
-        shader.setFloatUniform("uResolution", size.width, size.height)
-        shader.setFloatUniform("uTime", time)
-        shader.setFloatUniform("uSpacing", spacingPx)
-        shader.setFloatUniform("uRadius", radiusPx)
-        shader.setFloatUniform("uScanlines", scanlines)
-        shader.setColorUniform(
-            "uDotColor",
-            android.graphics.Color.argb(
-                (dotColor.alpha * 255).toInt(),
-                (dotColor.red * 255).toInt(),
-                (dotColor.green * 255).toInt(),
-                (dotColor.blue * 255).toInt()
+        try {
+            shader.setFloatUniform("uResolution", size.width, size.height)
+            shader.setFloatUniform("uTime", time)
+            shader.setFloatUniform("uSpacing", spacingPx)
+            shader.setFloatUniform("uRadius", radiusPx)
+            shader.setFloatUniform("uScanlines", scanlines)
+            shader.setColorUniform(
+                "uDotColor",
+                android.graphics.Color.argb(
+                    (dotColor.alpha * 255).toInt(),
+                    (dotColor.red * 255).toInt(),
+                    (dotColor.green * 255).toInt(),
+                    (dotColor.blue * 255).toInt()
+                )
             )
-        )
-        shader.setColorUniform(
-            "uBgColor",
-            android.graphics.Color.argb(
-                (backgroundColor.alpha * 255).toInt(),
-                (backgroundColor.red * 255).toInt(),
-                (backgroundColor.green * 255).toInt(),
-                (backgroundColor.blue * 255).toInt()
+            shader.setColorUniform(
+                "uBgColor",
+                android.graphics.Color.argb(
+                    (backgroundColor.alpha * 255).toInt(),
+                    (backgroundColor.red * 255).toInt(),
+                    (backgroundColor.green * 255).toInt(),
+                    (backgroundColor.blue * 255).toInt()
+                )
             )
-        )
-
-        drawRect(brush = ShaderBrush(shader))
+            drawRect(brush = ShaderBrush(shader))
+        } catch (e: Throwable) {
+            // Fallback to Canvas draw in case of GPU shader execution exception
+            drawRect(color = backgroundColor)
+            drawGridDots(spacingPx, radiusPx, dotShape, dotColor)
+        }
     }
 }
 
