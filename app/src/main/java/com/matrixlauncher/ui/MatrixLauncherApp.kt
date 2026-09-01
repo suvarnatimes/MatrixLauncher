@@ -6,18 +6,13 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.matrixlauncher.ui.common.HapticHelper
@@ -85,57 +80,11 @@ fun MatrixLauncherApp(
         }
     }
 
-    var vDragAccumulator by remember { mutableFloatStateOf(0f) }
-    val vDraggableState = rememberDraggableState { delta ->
-        vDragAccumulator += delta
-    }
-
-    var hDragAccumulator by remember { mutableFloatStateOf(0f) }
-    val hDraggableState = rememberDraggableState { delta ->
-        hDragAccumulator += delta
-    }
-
     DotMatrixTheme(
         accentColor = uiState.settings.accentColor,
         dotDensity = uiState.settings.dotDensity
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(
-                    if (uiState.currentScreen == LauncherScreen.HOME) {
-                        Modifier
-                            .draggable(
-                                state = vDraggableState,
-                                orientation = Orientation.Vertical,
-                                onDragStopped = { velocity ->
-                                    if (vDragAccumulator < -80f || velocity < -500f) {
-                                        viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeUpAction))
-                                    } else if (vDragAccumulator > 80f || velocity > 500f) {
-                                        viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeDownAction))
-                                    }
-                                    vDragAccumulator = 0f
-                                }
-                            )
-                            .draggable(
-                                state = hDragAccumulatorState(hDragAccumulator) { delta ->
-                                    hDragAccumulator += delta
-                                },
-                                orientation = Orientation.Horizontal,
-                                onDragStopped = { velocity ->
-                                    if (hDragAccumulator < -80f || velocity < -500f) {
-                                        viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeLeftAction))
-                                    } else if (hDragAccumulator > 80f || velocity > 500f) {
-                                        viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeRightAction))
-                                    }
-                                    hDragAccumulator = 0f
-                                }
-                            )
-                    } else {
-                        Modifier
-                    }
-                )
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             // High-Performance Cached Dot Grid Background
             DotGridBackground(
                 dotDensity = uiState.settings.dotDensity,
@@ -188,8 +137,23 @@ fun MatrixLauncherApp(
                             onConfirmMindfulLaunch = {
                                 viewModel.onIntent(LauncherIntent.ConfirmMindfulLaunch)
                             },
-                            onDoubleTap = {
-                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.doubleTapAction))
+                            onSwipeUp = {
+                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeUpAction))
+                            },
+                            onSwipeDown = {
+                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeDownAction))
+                            },
+                            onSwipeLeft = {
+                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeLeftAction))
+                            },
+                            onSwipeRight = {
+                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeRightAction))
+                            },
+                            onTwoFingerSwipeUp = {
+                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.twoFingerSwipeUpAction))
+                            },
+                            onTwoFingerSwipeDown = {
+                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.twoFingerSwipeDownAction))
                             },
                             onPinchIn = {
                                 viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.pinchInAction))
@@ -197,8 +161,8 @@ fun MatrixLauncherApp(
                             onPinchOut = {
                                 viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.pinchOutAction))
                             },
-                            onSwipeUpClick = {
-                                viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.DRAWER))
+                            onDoubleTap = {
+                                viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.doubleTapAction))
                             },
                             onSetDefaultLauncherClick = {
                                 onRequestSetDefaultLauncher()
@@ -378,12 +342,4 @@ fun MatrixLauncherApp(
             }
         }
     }
-}
-
-@Composable
-private fun hDragAccumulatorState(
-    current: Float,
-    onDelta: (Float) -> Unit
-) = rememberDraggableState { delta ->
-    onDelta(delta)
 }

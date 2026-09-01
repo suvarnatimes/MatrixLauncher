@@ -3,13 +3,16 @@ package com.matrixlauncher.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val Black = Color(0xFF000000)
-val DarkSurface = Color(0xFF0A0A0A)
-val SurfaceCard = Color(0xFF121212)
+val DarkSurface = Color(0xFF101010)
+val SurfaceCard = Color(0xFF1A1A1A)
 val White = Color(0xFFFFFFFF)
-val OffWhite = Color(0xFFE0E0E0)
-val DotInactiveColor = Color(0xFF181818)
+val OffWhite = Color(0xFFE8E8E8)
+val TextPrimary = Color(0xFFFFFFFF)
+val TextSecondary = Color(0xFFD0D0D0)
+val TextMuted = Color(0xFFA8A8A8)
+val DotInactiveColor = Color(0xFF242424)
 val DotDimGlow = Color(0x33FFFFFF)
-val DividerColor = Color(0xFF222222)
+val DividerColor = Color(0xFF333333)
 
 // Accent Palette
 val AccentRed = Color(0xFFFF2E2E)

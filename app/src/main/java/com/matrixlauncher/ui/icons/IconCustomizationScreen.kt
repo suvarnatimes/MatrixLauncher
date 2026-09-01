@@ -26,15 +26,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -61,10 +61,12 @@ import com.matrixlauncher.ui.graphics.DotMatrixAppIcon
 import com.matrixlauncher.ui.graphics.DotMatrixStockIcons
 import com.matrixlauncher.ui.theme.DarkSurface
 import com.matrixlauncher.ui.theme.DividerColor
-import com.matrixlauncher.ui.theme.DotInactiveColor
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
 import com.matrixlauncher.ui.theme.OffWhite
 import com.matrixlauncher.ui.theme.SurfaceCard
+import com.matrixlauncher.ui.theme.TextMuted
+import com.matrixlauncher.ui.theme.TextPrimary
+import com.matrixlauncher.ui.theme.TextSecondary
 import com.matrixlauncher.ui.theme.White
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,19 +109,19 @@ fun IconCustomizationScreen(
             ) {
                 IconButton(onClick = onBackClick) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = White
+                        tint = TextPrimary
                     )
                 }
 
                 Text(
                     text = "ICON CUSTOMIZATION STUDIO",
-                    color = White,
+                    color = TextPrimary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
+                    letterSpacing = 1.2.sp
                 )
             }
 
@@ -127,7 +129,7 @@ fun IconCustomizationScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
                     .background(SurfaceCard, RoundedCornerShape(4.dp))
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
@@ -135,77 +137,73 @@ fun IconCustomizationScreen(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = null,
-                        tint = DotInactiveColor,
+                        tint = TextSecondary,
                         modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     BasicTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
                         textStyle = TextStyle(
-                            color = White,
+                            color = TextPrimary,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 14.sp
                         ),
                         cursorBrush = SolidColor(accent.primaryColor),
-                        singleLine = true,
-                        decorationBox = { innerTextField ->
+                        decorationBox = { inner ->
                             if (searchQuery.isEmpty()) {
                                 Text(
-                                    text = "FILTER APPS TO EDIT ICON...",
-                                    color = DotInactiveColor,
+                                    text = "Search app to customize icon...",
+                                    color = TextSecondary,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 13.sp
                                 )
                             }
-                            innerTextField()
+                            inner()
                         }
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // App Icon List
+            // Apps Grid/List
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    .weight(1f)
+                    .padding(horizontal = 16.dp)
             ) {
-                items(
-                    items = filteredApps,
-                    key = { it.uniqueKey }
-                ) { app ->
+                items(filteredApps, key = { it.packageName }) { app ->
                     AppIconRowItem(
                         app = app,
                         iconStyle = iconStyle,
                         dotShape = dotShape,
                         onClick = { selectedAppForEdit = app }
                     )
+                    HorizontalDivider(color = DividerColor.copy(alpha = 0.5f), thickness = 0.5.dp)
                 }
             }
         }
 
-        // Icon Editor Dialog / Modal
+        // Edit Modal Dialog for Selected App
         if (selectedAppForEdit != null) {
-            val app = selectedAppForEdit!!
-            IconEditorDialog(
-                app = app,
+            EditAppIconDialog(
+                app = selectedAppForEdit!!,
                 iconStyle = iconStyle,
                 dotShape = dotShape,
                 onDismiss = { selectedAppForEdit = null },
-                onSave = { glyph, colorHex, shape ->
-                    onUpdateAppIcon(app.packageName, app.customIconUri, colorHex, glyph, shape)
+                onSaveGlyph = { glyph, colorHex ->
+                    onUpdateAppIcon(selectedAppForEdit!!.packageName, null, colorHex, glyph, null)
                     selectedAppForEdit = null
                 },
                 onUploadImage = { uri ->
-                    onUploadImageForApp(app.packageName, uri)
+                    onUploadImageForApp(selectedAppForEdit!!.packageName, uri)
                     selectedAppForEdit = null
                 },
                 onReset = {
-                    onResetAppIcon(app.packageName)
+                    onResetAppIcon(selectedAppForEdit!!.packageName)
                     selectedAppForEdit = null
                 }
             )
@@ -227,36 +225,38 @@ private fun AppIconRowItem(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        DotMatrixAppIcon(
-            app = app,
-            iconStyle = iconStyle,
-            dotShape = dotShape,
-            sizeDp = 32.dp
-        )
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = app.displayLabel.uppercase(),
-                color = White,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 1.sp
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            DotMatrixAppIcon(
+                app = app,
+                iconStyle = iconStyle,
+                dotShape = dotShape,
+                sizeDp = 28.dp
             )
-            Text(
-                text = if (app.customIconUri != null) "CUSTOM PNG ICON" else if (app.customGlyphName != null) "GLYPH: ${app.customGlyphName}" else "STOCK DOT-MATRIX",
-                color = if (app.customIconUri != null || app.customGlyphName != null) accent.primaryColor else DotInactiveColor,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
-            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = app.displayLabel.uppercase(),
+                    color = TextPrimary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = if (app.customIconUri != null) "CUSTOM UPLOADED PNG"
+                           else if (app.customGlyphName != null) "GLYPH: ${app.customGlyphName}"
+                           else "DEFAULT ICON",
+                    color = if (app.customIconUri != null || app.customGlyphName != null) accent.primaryColor else TextSecondary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp
+                )
+            }
         }
 
         Text(
-            text = "EDIT",
+            text = "EDIT >",
             color = accent.primaryColor,
             fontFamily = FontFamily.Monospace,
             fontSize = 12.sp,
@@ -266,21 +266,19 @@ private fun AppIconRowItem(
 }
 
 @Composable
-fun IconEditorDialog(
+fun EditAppIconDialog(
     app: AppModel,
     iconStyle: IconStyle,
     dotShape: DotShape,
     onDismiss: () -> Unit,
-    onSave: (glyphName: String?, colorHex: String?, shape: String?) -> Unit,
+    onSaveGlyph: (glyph: String, colorHex: String?) -> Unit,
     onUploadImage: (Uri) -> Unit,
     onReset: () -> Unit
 ) {
     val accent = LocalMatrixAccentColor.current
-    var selectedGlyph by remember { mutableStateOf(app.customGlyphName) }
-    var selectedColorHex by remember { mutableStateOf(app.customIconColorHex ?: "") }
-    var selectedShape by remember { mutableStateOf(app.customIconShape ?: dotShape.name) }
+    var selectedGlyph by remember { mutableStateOf(app.customGlyphName ?: "CAMERA") }
+    var selectedColor by remember { mutableStateOf(app.customIconColorHex ?: "") }
 
-    // Image Picker for PNG / JPEG upload
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -289,53 +287,37 @@ fun IconEditorDialog(
         }
     }
 
-    val previewApp = remember(app, selectedGlyph, selectedColorHex, selectedShape) {
-        app.copy(
-            customGlyphName = selectedGlyph,
-            customIconColorHex = selectedColorHex.ifBlank { null },
-            customIconShape = selectedShape
-        )
-    }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSurface,
         title = {
-            Text(
-                text = "EDIT ICON: ${app.displayLabel.uppercase()}",
-                color = White,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Column {
+                Text(
+                    text = "EDIT ICON // ${app.displayLabel.uppercase()}",
+                    color = TextPrimary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Pick stock glyph, LED color, or upload image",
+                    color = TextSecondary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp
+                )
+            }
         },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
             ) {
-                // Live Real-Time Dot Matrix Preview
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(SurfaceCard, RoundedCornerShape(8.dp))
-                        .border(1.dp, accent.primaryColor, RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    DotMatrixAppIcon(
-                        app = previewApp,
-                        iconStyle = iconStyle,
-                        dotShape = try { DotShape.valueOf(selectedShape) } catch (e: Exception) { dotShape },
-                        sizeDp = 44.dp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Upload Image Button
+                // Upload Custom PNG/JPEG Button
                 Button(
                     onClick = { imagePickerLauncher.launch("image/*") },
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = White),
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = TextPrimary),
                     shape = RoundedCornerShape(4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -343,11 +325,11 @@ fun IconEditorDialog(
                         imageVector = Icons.Default.FileUpload,
                         contentDescription = null,
                         tint = accent.primaryColor,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "UPLOAD CUSTOM PNG / IMAGE",
+                        text = "UPLOAD PNG/JPEG IMAGE",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -355,31 +337,26 @@ fun IconEditorDialog(
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                Divider(color = DividerColor)
-                Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "SELECT DOT-MATRIX GLYPH",
-                    color = DotInactiveColor,
+                    text = "PRESET DOT-MATRIX GLYPHS",
+                    color = TextPrimary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Start)
+                    fontWeight = FontWeight.Bold
                 )
-
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Preset Glyphs Selector
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(DotMatrixStockIcons.ALL_GLYPHS.keys.toList()) { glyphName ->
-                        val isSelected = selectedGlyph.equals(glyphName, ignoreCase = true)
+                    items(DotMatrixStockIcons.ALL_GLYPHS.keys.toList()) { glyphKey ->
+                        val isSelected = selectedGlyph.equals(glyphKey, ignoreCase = true)
                         Box(
                             modifier = Modifier
                                 .background(
-                                    if (isSelected) accent.primaryColor.copy(alpha = 0.3f) else SurfaceCard,
+                                    if (isSelected) accent.primaryColor.copy(alpha = 0.25f) else SurfaceCard,
                                     RoundedCornerShape(4.dp)
                                 )
                                 .border(
@@ -387,97 +364,86 @@ fun IconEditorDialog(
                                     if (isSelected) accent.primaryColor else DividerColor,
                                     RoundedCornerShape(4.dp)
                                 )
-                                .clickable { selectedGlyph = glyphName }
+                                .clickable { selectedGlyph = glyphKey }
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Text(
-                                text = glyphName,
-                                color = if (isSelected) accent.primaryColor else OffWhite,
+                                text = glyphKey,
+                                color = if (isSelected) accent.primaryColor else TextPrimary,
                                 fontFamily = FontFamily.Monospace,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Preset Color Selector
                 Text(
-                    text = "SELECT LED GLOW COLOR",
-                    color = DotInactiveColor,
+                    text = "LED GLOW COLOR",
+                    color = TextPrimary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Start)
+                    fontWeight = FontWeight.Bold
                 )
-
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Row(
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    AccentColor.entries.filter { it != AccentColor.CUSTOM }.forEach { colorPreset ->
-                        val hex = when (colorPreset) {
-                            AccentColor.CRIMSON -> "#FF2E2E"
-                            AccentColor.AMBER -> "#FFB300"
-                            AccentColor.EMERALD -> "#00E676"
-                            AccentColor.CYAN -> "#00E5FF"
-                            AccentColor.PURPLE -> "#D500F9"
-                            AccentColor.WHITE -> "#FFFFFF"
-                            else -> "#FF2E2E"
-                        }
-                        val isSelected = selectedColorHex.equals(hex, ignoreCase = true)
+                    items(AccentColor.entries) { colorItem ->
+                        val isSelected = selectedColor == colorItem.primaryColor.toArgbHex()
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
-                                .background(colorPreset.primaryColor, CircleShape)
-                                .border(if (isSelected) 2.dp else 0.dp, White, CircleShape)
-                                .clickable { selectedColorHex = hex }
+                                .background(colorItem.primaryColor, CircleShape)
+                                .border(
+                                    2.dp,
+                                    if (isSelected) White else Color.Transparent,
+                                    CircleShape
+                                )
+                                .clickable { selectedColor = colorItem.primaryColor.toArgbHex() }
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Reset to Default Button
+                TextButton(
+                    onClick = onReset,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Icon(imageVector = Icons.Default.Refresh, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "RESET TO DEFAULT", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
                 }
             }
         },
         confirmButton = {
-            Button(
-                onClick = { onSave(selectedGlyph, selectedColorHex.ifBlank { null }, selectedShape) },
-                colors = ButtonDefaults.buttonColors(containerColor = accent.primaryColor, contentColor = Color.Black),
-                shape = RoundedCornerShape(4.dp)
-            ) {
+            TextButton(onClick = { onSaveGlyph(selectedGlyph, selectedColor.ifBlank { null }) }) {
                 Text(
-                    text = "SAVE ICON",
+                    text = "SAVE GLYPH",
+                    color = accent.primaryColor,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold
                 )
             }
         },
         dismissButton = {
-            Row {
-                TextButton(onClick = onReset) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        tint = DotInactiveColor,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "RESET",
-                        color = DotInactiveColor,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-                TextButton(onClick = onDismiss) {
-                    Text(
-                        text = "CANCEL",
-                        color = DotInactiveColor,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
+            TextButton(onClick = onDismiss) {
+                Text(text = "CANCEL", color = TextSecondary, fontFamily = FontFamily.Monospace)
             }
         }
     )
+}
+
+private fun Color.toArgbHex(): String {
+    val a = (alpha * 255).toInt()
+    val r = (red * 255).toInt()
+    val g = (green * 255).toInt()
+    val b = (blue * 255).toInt()
+    return String.format("#%02X%02X%02X%02X", a, r, g, b)
 }

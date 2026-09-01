@@ -1,11 +1,6 @@
 package com.matrixlauncher.ui.home
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
@@ -14,9 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,17 +37,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -70,14 +58,16 @@ import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.ScreenTimeStats
 import com.matrixlauncher.domain.model.WeatherInfo
+import com.matrixlauncher.ui.common.detectMatrixGestures
 import com.matrixlauncher.ui.graphics.DotMatrixAppIcon
-import com.matrixlauncher.ui.graphics.DotMatrixCanvas.drawDotArrow
 import com.matrixlauncher.ui.theme.Black
 import com.matrixlauncher.ui.theme.DarkSurface
-import com.matrixlauncher.ui.theme.DotInactiveColor
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
 import com.matrixlauncher.ui.theme.OffWhite
 import com.matrixlauncher.ui.theme.SurfaceCard
+import com.matrixlauncher.ui.theme.TextMuted
+import com.matrixlauncher.ui.theme.TextPrimary
+import com.matrixlauncher.ui.theme.TextSecondary
 import com.matrixlauncher.ui.theme.White
 import com.matrixlauncher.ui.widgets.DotMatrixWidgetsContainer
 
@@ -108,52 +98,41 @@ fun HomeScreen(
     onUpdateScratchpadNote: (String) -> Unit,
     onCancelMindfulLaunch: () -> Unit,
     onConfirmMindfulLaunch: () -> Unit,
-    onDoubleTap: () -> Unit,
+    onSwipeUp: () -> Unit,
+    onSwipeDown: () -> Unit,
+    onSwipeLeft: () -> Unit,
+    onSwipeRight: () -> Unit,
+    onTwoFingerSwipeUp: () -> Unit,
+    onTwoFingerSwipeDown: () -> Unit,
     onPinchIn: () -> Unit,
     onPinchOut: () -> Unit,
-    onSwipeUpClick: () -> Unit,
+    onDoubleTap: () -> Unit,
     onSetDefaultLauncherClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onWidgetRemove: (HomeWidgetType) -> Unit = {},
     onWidgetAdd: (HomeWidgetType) -> Unit = {}
 ) {
     val accent = LocalMatrixAccentColor.current
-    val density = LocalDensity.current
     var isEditingScratchpad by remember { mutableStateOf(false) }
-
-    val pulseAnim = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        pulseAnim.animateTo(
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            )
-        )
-    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onDoubleTap = { onDoubleTap() }
-                )
-            }
-            .pointerInput(Unit) {
-                // Two-finger pinch-in (zoom < 1) and pinch-out (zoom > 1) detection
-                detectTransformGestures { _, _, zoom, _ ->
-                    if (zoom < 0.85f) {
-                        onPinchIn()
-                    } else if (zoom > 1.15f) {
-                        onPinchOut()
-                    }
-                }
-            }
+            .detectMatrixGestures(
+                onSwipeUp = onSwipeUp,
+                onSwipeDown = onSwipeDown,
+                onSwipeLeft = onSwipeLeft,
+                onSwipeRight = onSwipeRight,
+                onTwoFingerSwipeUp = onTwoFingerSwipeUp,
+                onTwoFingerSwipeDown = onTwoFingerSwipeDown,
+                onPinchIn = onPinchIn,
+                onPinchOut = onPinchOut,
+                onDoubleTap = onDoubleTap
+            )
     ) {
-        // Settings Button Top-Right
+        // Settings Gear Icon Top-Right
         IconButton(
             onClick = onSettingsClick,
             modifier = Modifier
@@ -163,7 +142,7 @@ fun HomeScreen(
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Settings",
-                tint = DotInactiveColor.copy(alpha = 0.8f)
+                tint = TextSecondary.copy(alpha = 0.85f)
             )
         }
 
@@ -210,7 +189,7 @@ fun HomeScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "TAP TO SET AS DEFAULT LAUNCHER",
-                                    color = White,
+                                    color = TextPrimary,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
@@ -249,79 +228,28 @@ fun HomeScreen(
                 )
             }
 
-            // Pinned Favorites List (Center with custom stock icons)
+            // Pinned Favorites List (Clean & Minimalist, No Default Text Clutter)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.Center
             ) {
-                if (pinnedFavorites.isEmpty()) {
-                    Text(
-                        text = "NO PINNED APPS // SWIPE UP TO PIN",
-                        color = DotInactiveColor,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Normal,
-                        letterSpacing = 1.sp,
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                pinnedFavorites.forEach { app ->
+                    FavoriteAppItem(
+                        app = app,
+                        iconStyle = iconStyle,
+                        dotShape = dotShape,
+                        accentColor = accent,
+                        onClick = { onAppClick(app) },
+                        onLongClick = { onAppLongClick(app) }
                     )
-                } else {
-                    pinnedFavorites.forEach { app ->
-                        FavoriteAppItem(
-                            app = app,
-                            iconStyle = iconStyle,
-                            dotShape = dotShape,
-                            accentColor = accent,
-                            onClick = { onAppClick(app) },
-                            onLongClick = { onAppLongClick(app) }
-                        )
-                    }
                 }
             }
 
-            // Bottom Swipe-Up Indicator
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onSwipeUpClick
-                    )
-                    .padding(bottom = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                val arrowRadius = with(density) { 1.5.dp.toPx() }
-                val arrowSpacing = with(density) { 4.5.dp.toPx() }
-                val pulseOffset = (pulseAnim.value * 6f)
-
-                Canvas(
-                    modifier = Modifier
-                        .width(28.dp)
-                        .height(18.dp)
-                ) {
-                    drawDotArrow(
-                        center = Offset(size.width / 2f, (size.height / 2f) - pulseOffset),
-                        dotRadius = arrowRadius,
-                        dotSpacing = arrowSpacing,
-                        color = accent.primaryColor.copy(alpha = 0.4f + pulseAnim.value * 0.6f),
-                        pointUp = true
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "APPLICATIONS",
-                    color = DotInactiveColor.copy(alpha = 0.9f),
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
-                )
-            }
+            // Minimal bottom spacer (clutter text removed for clean look)
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // Scratchpad Edit Dialog
@@ -388,7 +316,7 @@ private fun FavoriteAppItem(
 
         Text(
             text = app.displayLabel.uppercase(),
-            color = White,
+            color = TextPrimary,
             fontFamily = FontFamily.Monospace,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
@@ -423,7 +351,7 @@ fun ScratchpadEditDialog(
         title = {
             Text(
                 text = "EDIT SCRATCHPAD NOTE",
-                color = White,
+                color = TextPrimary,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
@@ -438,7 +366,7 @@ fun ScratchpadEditDialog(
                     .background(SurfaceCard, RoundedCornerShape(4.dp))
                     .padding(12.dp),
                 textStyle = TextStyle(
-                    color = White,
+                    color = TextPrimary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 14.sp
                 ),
@@ -461,7 +389,7 @@ fun ScratchpadEditDialog(
             TextButton(onClick = onDismiss) {
                 Text(
                     text = "CANCEL",
-                    color = DotInactiveColor,
+                    color = TextSecondary,
                     fontFamily = FontFamily.Monospace
                 )
             }
@@ -492,7 +420,7 @@ fun MindfulPauseDialog(
         title = {
             Text(
                 text = "MINDFUL PAUSE",
-                color = White,
+                color = TextPrimary,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
@@ -502,7 +430,7 @@ fun MindfulPauseDialog(
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Is opening ${app.displayLabel.uppercase()} intentional right now?",
-                    color = OffWhite,
+                    color = TextSecondary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 13.sp
                 )
@@ -520,7 +448,7 @@ fun MindfulPauseDialog(
             TextButton(onClick = onOpenNow) {
                 Text(
                     text = "OPEN NOW",
-                    color = OffWhite,
+                    color = TextSecondary,
                     fontFamily = FontFamily.Monospace
                 )
             }

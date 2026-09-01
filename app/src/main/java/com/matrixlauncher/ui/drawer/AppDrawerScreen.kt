@@ -33,7 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -47,8 +47,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
@@ -93,6 +93,9 @@ import com.matrixlauncher.ui.theme.DotInactiveColor
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
 import com.matrixlauncher.ui.theme.OffWhite
 import com.matrixlauncher.ui.theme.SurfaceCard
+import com.matrixlauncher.ui.theme.TextMuted
+import com.matrixlauncher.ui.theme.TextPrimary
+import com.matrixlauncher.ui.theme.TextSecondary
 import com.matrixlauncher.ui.theme.White
 import kotlinx.coroutines.launch
 
@@ -118,7 +121,7 @@ fun AppDrawerScreen(
     onToggleFavorite: (String) -> Unit,
     onRenameApp: (packageName: String, newLabel: String?) -> Unit,
     onHideApp: (packageName: String, isHidden: Boolean) -> Unit,
-    onOpenIconStudio: () -> Unit,
+    onOpenIconStudio: () -> Unit = {},
     onAppInfo: (AppModel) -> Unit,
     onUninstall: (AppModel) -> Unit,
     onWebSearch: (query: String, provider: WebSearchProvider) -> Unit,
@@ -126,37 +129,23 @@ fun AppDrawerScreen(
     onCloseRenameDialog: () -> Unit,
     onBackClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
-    val accent = LocalMatrixAccentColor.current
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val accent = LocalMatrixAccentColor.current
 
-    val isSearching = searchQuery.isNotBlank()
-
-    val letterIndexMap = remember(apps, isSearching) {
-        if (isSearching) emptyMap()
-        else {
-            val map = mutableMapOf<Char, Int>()
-            apps.forEachIndexed { index, app ->
-                val header = app.sectionHeader
-                if (!map.containsKey(header)) {
-                    map[header] = index
-                }
-            }
-            map
-        }
-    }
-
-    val availableLetters = remember(letterIndexMap) { letterIndexMap.keys }
-
-    LaunchedEffect(autoFocusSearch) {
+    LaunchedEffect(Unit) {
         if (autoFocusSearch) {
             focusRequester.requestFocus()
             keyboardController?.show()
         }
+    }
+
+    val availableLetters = remember(apps) {
+        apps.mapNotNull { it.displayLabel.firstOrNull()?.uppercaseChar() }
+            .distinct()
+            .sorted()
     }
 
     Box(
@@ -166,7 +155,7 @@ fun AppDrawerScreen(
             .navigationBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Search Bar
+            // Search Input Header
             DrawerSearchBar(
                 query = searchQuery,
                 focusRequester = focusRequester,
@@ -175,108 +164,77 @@ fun AppDrawerScreen(
                 onClearClick = { onSearchQueryChange("") }
             )
 
-            // In-Line Calculator Result Card
-            if (calculatedResult != null) {
-                CalculatorResultCard(
-                    expression = searchQuery,
-                    result = calculatedResult,
-                    accentColor = accent,
-                    onCopyResult = {
-                        clipboardManager.setText(AnnotatedString(calculatedResult))
-                    }
+            // Dynamic Search Result Extensions (Calculator / Web / Shortcuts)
+            if (searchQuery.isNotBlank()) {
+                DrawerSearchExtensions(
+                    searchQuery = searchQuery,
+                    calculatedResult = calculatedResult,
+                    matchedShortcuts = matchedShortcuts,
+                    onWebSearch = onWebSearch
                 )
             }
 
-            // Web Search Provider Chips (When searching)
-            if (isSearching) {
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(WebSearchProvider.entries) { provider ->
-                        WebSearchChip(
-                            provider = provider,
-                            onClick = { onWebSearch(searchQuery, provider) }
-                        )
-                    }
-                }
-            }
-
-            // Direct System Settings Shortcuts
-            if (matchedShortcuts.isNotEmpty()) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                    Text(
-                        text = "// SYSTEM SHORTCUTS",
-                        color = accent.primaryColor,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    matchedShortcuts.forEach { shortcut ->
-                        SystemShortcutItem(
-                            shortcut = shortcut,
-                            onClick = {
-                                SystemSettingsShortcuts.launch(context, shortcut)
+            // Main App List with Alphabet Fast Scroller
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                if (scrollerAlignment == ScrollerAlignment.LEFT && searchQuery.isBlank() && availableLetters.isNotEmpty()) {
+                    AlphabetFastScroller(
+                        letters = availableLetters,
+                        onLetterSelected = { letter ->
+                            val index = apps.indexOfFirst {
+                                it.displayLabel.startsWith(letter, ignoreCase = true)
                             }
-                        )
-                    }
-                }
-            }
-
-            // Content: Empty Search or App List
-            if (apps.isEmpty() && matchedShortcuts.isEmpty() && calculatedResult == null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 80.dp),
-                    contentAlignment = Alignment.TopCenter
-                ) {
-                    Text(
-                        text = if (isSearching) "NO MATCHING APPLICATIONS" else "NO APPS INSTALLED",
-                        color = DotInactiveColor,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        letterSpacing = 1.5.sp
+                            if (index != -1) {
+                                coroutineScope.launch {
+                                    listState.scrollToItem(index)
+                                }
+                            }
+                        }
                     )
                 }
-            } else {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    if (!isSearching && apps.size > 10 && scrollerAlignment == ScrollerAlignment.LEFT) {
-                        FastScroller(
-                            availableLetters = availableLetters,
-                            onLetterSelected = { letter ->
-                                val targetIndex = letterIndexMap[letter]
-                                if (targetIndex != null) {
-                                    coroutineScope.launch { listState.scrollToItem(targetIndex) }
-                                }
-                            },
-                            onDragStateChanged = { dragging ->
-                                if (dragging) keyboardController?.hide()
-                            },
-                            modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 16.dp)
-                        )
-                    }
 
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp, start = 16.dp, end = 8.dp)
-                    ) {
+                // App List
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    if (apps.isEmpty() && searchQuery.isNotBlank()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "NO MATCHING APPLICATIONS",
+                                    color = TextSecondary,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 13.sp,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    } else {
                         itemsIndexed(
                             items = apps,
                             key = { _, app -> app.uniqueKey }
                         ) { index, app ->
-                            val showHeader = !isSearching && (index == 0 || app.sectionHeader != apps[index - 1].sectionHeader)
+                            val showSectionHeader = searchQuery.isBlank() && (
+                                index == 0 ||
+                                apps[index - 1].displayLabel.first().uppercaseChar() != app.displayLabel.first().uppercaseChar()
+                            )
 
-                            if (showHeader) {
+                            if (showSectionHeader) {
                                 DrawerSectionHeader(
-                                    header = app.sectionHeader,
+                                    letter = app.displayLabel.first().uppercaseChar(),
                                     accentColor = accent
                                 )
                             }
@@ -291,42 +249,39 @@ fun AppDrawerScreen(
                             )
                         }
                     }
+                }
 
-                    if (!isSearching && apps.size > 10 && scrollerAlignment == ScrollerAlignment.RIGHT) {
-                        FastScroller(
-                            availableLetters = availableLetters,
-                            onLetterSelected = { letter ->
-                                val targetIndex = letterIndexMap[letter]
-                                if (targetIndex != null) {
-                                    coroutineScope.launch { listState.scrollToItem(targetIndex) }
+                if (scrollerAlignment == ScrollerAlignment.RIGHT && searchQuery.isBlank() && availableLetters.isNotEmpty()) {
+                    AlphabetFastScroller(
+                        letters = availableLetters,
+                        onLetterSelected = { letter ->
+                            val index = apps.indexOfFirst {
+                                it.displayLabel.startsWith(letter, ignoreCase = true)
+                            }
+                            if (index != -1) {
+                                coroutineScope.launch {
+                                    listState.scrollToItem(index)
                                 }
-                            },
-                            onDragStateChanged = { dragging ->
-                                if (dragging) keyboardController?.hide()
-                            },
-                            modifier = Modifier.padding(end = 4.dp, top = 8.dp, bottom = 16.dp)
-                        )
-                    }
+                            }
+                        }
+                    )
                 }
             }
         }
 
-        // Context Menu Sheet with App Shortcuts and Edit Icon option
+        // Context Menu Bottom Sheet
         if (selectedAppForMenu != null) {
-            AppContextMenuSheet(
+            AppContextBottomSheet(
                 app = selectedAppForMenu,
                 shortcuts = selectedAppShortcuts,
-                onDismiss = onCloseContextMenu,
                 onShortcutClick = onShortcutClick,
                 onToggleFavorite = { onToggleFavorite(selectedAppForMenu.packageName) },
-                onRename = { /* Handled in parent */ },
-                onEditIcon = {
-                    onCloseContextMenu()
-                    onOpenIconStudio()
-                },
+                onRename = { onRenameApp(selectedAppForMenu.packageName, null) },
                 onHide = { onHideApp(selectedAppForMenu.packageName, true) },
+                onOpenIconStudio = onOpenIconStudio,
                 onAppInfo = { onAppInfo(selectedAppForMenu) },
-                onUninstall = { onUninstall(selectedAppForMenu) }
+                onUninstall = { onUninstall(selectedAppForMenu) },
+                onDismiss = onCloseContextMenu
             )
         }
 
@@ -335,54 +290,233 @@ fun AppDrawerScreen(
             AppRenameDialog(
                 app = selectedAppForRename,
                 onDismiss = onCloseRenameDialog,
-                onConfirm = { newName -> onRenameApp(selectedAppForRename.packageName, newName) }
+                onConfirm = { newLabel ->
+                    onRenameApp(selectedAppForRename.packageName, newLabel)
+                }
             )
         }
     }
 }
 
 @Composable
-private fun CalculatorResultCard(
-    expression: String,
-    result: String,
+private fun DrawerSectionHeader(
+    letter: Char,
+    accentColor: AccentColor
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 6.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "[$letter]",
+                color = accentColor.primaryColor,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+            HorizontalDivider(
+                color = DividerColor,
+                thickness = 1.dp,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DrawerAppItem(
+    app: AppModel,
+    iconStyle: IconStyle,
+    dotShape: DotShape,
     accentColor: AccentColor,
-    onCopyResult: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .background(SurfaceCard, RoundedCornerShape(4.dp))
-            .border(1.dp, accentColor.primaryColor.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-            .clickable(onClick = onCopyResult)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .padding(vertical = 10.dp, horizontal = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Text(
-                text = "CALC // $expression",
-                color = DotInactiveColor,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
+        if (iconStyle != IconStyle.TEXT_ONLY) {
+            DotMatrixAppIcon(
+                app = app,
+                iconStyle = iconStyle,
+                dotShape = dotShape,
+                sizeDp = 24.dp
             )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "= $result",
-                color = accentColor.primaryColor,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            )
+            Spacer(modifier = Modifier.width(14.dp))
         }
 
-        Icon(
-            imageVector = Icons.Default.ContentCopy,
-            contentDescription = "Copy",
-            tint = OffWhite,
-            modifier = Modifier.size(18.dp)
+        Text(
+            text = app.displayLabel.uppercase(),
+            color = TextPrimary,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 1.sp,
+            modifier = Modifier.weight(1f)
         )
+
+        if (app.isFavorite) {
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = "Pinned",
+                tint = accentColor.primaryColor,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+        }
+
+        if (app.isWorkProfile) {
+            Text(
+                text = "[W]",
+                color = accentColor.primaryColor,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlphabetFastScroller(
+    letters: List<Char>,
+    onLetterSelected: (Char) -> Unit
+) {
+    val accent = LocalMatrixAccentColor.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(horizontal = 6.dp),
+        verticalArrangement = Arrangement.SpaceEvenly,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        letters.forEach { letter ->
+            Text(
+                text = "$letter",
+                color = TextSecondary,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clickable { onLetterSelected(letter) }
+                    .padding(vertical = 2.dp, horizontal = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DrawerSearchExtensions(
+    searchQuery: String,
+    calculatedResult: String?,
+    matchedShortcuts: List<SystemSettingShortcut>,
+    onWebSearch: (query: String, provider: WebSearchProvider) -> Unit
+) {
+    val accent = LocalMatrixAccentColor.current
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .background(SurfaceCard, RoundedCornerShape(4.dp))
+            .border(1.dp, DividerColor, RoundedCornerShape(4.dp))
+            .padding(10.dp)
+    ) {
+        // Calculator evaluation result
+        if (calculatedResult != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        clipboardManager.setText(AnnotatedString(calculatedResult))
+                    }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "= ",
+                        color = accent.primaryColor,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = calculatedResult,
+                        color = TextPrimary,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy Result",
+                    tint = TextSecondary,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            HorizontalDivider(color = DividerColor, thickness = 1.dp, modifier = Modifier.padding(vertical = 6.dp))
+        }
+
+        // Web Search Quick Fallbacks
+        Text(
+            text = "SEARCH WEB FOR \"${searchQuery.uppercase()}\"",
+            color = TextSecondary,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(WebSearchProvider.entries) { provider ->
+                WebSearchChip(
+                    provider = provider,
+                    onClick = { onWebSearch(searchQuery, provider) }
+                )
+            }
+        }
+
+        // System Settings Shortcuts
+        if (matchedShortcuts.isNotEmpty()) {
+            HorizontalDivider(color = DividerColor, thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
+            Text(
+                text = "SYSTEM SETTINGS",
+                color = TextSecondary,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            matchedShortcuts.forEach { shortcut ->
+                SystemShortcutItem(
+                    shortcut = shortcut,
+                    onClick = {
+                        SystemSettingsShortcuts.launch(context, shortcut)
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -391,6 +525,7 @@ private fun WebSearchChip(
     provider: WebSearchProvider,
     onClick: () -> Unit
 ) {
+    val accent = LocalMatrixAccentColor.current
     Box(
         modifier = Modifier
             .background(DarkSurface, RoundedCornerShape(4.dp))
@@ -402,13 +537,13 @@ private fun WebSearchChip(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
-                tint = DotInactiveColor,
+                tint = accent.primaryColor,
                 modifier = Modifier.size(12.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = provider.label.uppercase(),
-                color = White,
+                color = TextPrimary,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium
@@ -432,21 +567,21 @@ private fun SystemShortcutItem(
         Icon(
             imageVector = Icons.Default.Settings,
             contentDescription = null,
-            tint = DotInactiveColor,
+            tint = TextSecondary,
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(
                 text = shortcut.title,
-                color = White,
+                color = TextPrimary,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
             Text(
                 text = shortcut.description,
-                color = DotInactiveColor,
+                color = TextSecondary,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp
             )
@@ -472,9 +607,9 @@ private fun DrawerSearchBar(
     ) {
         IconButton(onClick = onBackClick) {
             Icon(
-                imageVector = Icons.Default.ArrowBack,
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = White
+                tint = TextPrimary
             )
         }
 
@@ -491,7 +626,7 @@ private fun DrawerSearchBar(
                     .fillMaxWidth()
                     .focusRequester(focusRequester),
                 textStyle = TextStyle(
-                    color = White,
+                    color = TextPrimary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
@@ -501,124 +636,36 @@ private fun DrawerSearchBar(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 decorationBox = { innerTextField ->
-                    if (query.isEmpty()) {
-                        Text(
-                            text = "SEARCH OR COMPUTE_",
-                            color = DotInactiveColor,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 15.sp,
-                            letterSpacing = 1.sp
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (query.isEmpty()) {
+                                Text(
+                                    text = "SEARCH / CALCULATE...",
+                                    color = TextSecondary,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 14.sp,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                            innerTextField()
+                        }
+
+                        if (query.isNotEmpty()) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear Query",
+                                tint = TextSecondary,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clickable(onClick = onClearClick)
+                            )
+                        }
                     }
-                    innerTextField()
                 }
-            )
-        }
-
-        AnimatedVisibility(
-            visible = query.isNotEmpty(),
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            IconButton(onClick = onClearClick) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Clear",
-                    tint = OffWhite
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DrawerSectionHeader(
-    header: Char,
-    accentColor: AccentColor
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp, bottom = 6.dp, start = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "// $header",
-            color = accentColor.primaryColor,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp
-        )
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun DrawerAppItem(
-    app: AppModel,
-    iconStyle: IconStyle,
-    dotShape: DotShape,
-    accentColor: AccentColor,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
-            .padding(vertical = 8.dp, horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (iconStyle != IconStyle.TEXT_ONLY) {
-            DotMatrixAppIcon(
-                app = app,
-                iconStyle = iconStyle,
-                dotShape = dotShape,
-                sizeDp = 24.dp
-            )
-            Spacer(modifier = Modifier.width(14.dp))
-        } else {
-            Canvas(modifier = Modifier.size(6.dp)) {
-                drawCircle(
-                    color = if (app.isFavorite) accentColor.primaryColor else DotInactiveColor,
-                    radius = 2.dp.toPx()
-                )
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-        }
-
-        Text(
-            text = app.displayLabel.uppercase(),
-            color = White,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            letterSpacing = 1.sp,
-            modifier = Modifier.weight(1f)
-        )
-
-        if (app.isWorkProfile) {
-            Text(
-                text = "[WORK]",
-                color = accentColor.primaryColor,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-        }
-
-        if (app.isFavorite) {
-            Text(
-                text = "*",
-                color = accentColor.primaryColor,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
             )
         }
     }
@@ -626,17 +673,17 @@ private fun DrawerAppItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppContextMenuSheet(
+private fun AppContextBottomSheet(
     app: AppModel,
-    shortcuts: List<AppShortcutModel> = emptyList(),
-    onDismiss: () -> Unit,
+    shortcuts: List<AppShortcutModel>,
     onShortcutClick: (AppShortcutModel) -> Unit,
     onToggleFavorite: () -> Unit,
     onRename: () -> Unit,
-    onEditIcon: () -> Unit,
     onHide: () -> Unit,
+    onOpenIconStudio: () -> Unit,
     onAppInfo: () -> Unit,
-    onUninstall: () -> Unit
+    onUninstall: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     val accent = LocalMatrixAccentColor.current
     val sheetState = rememberModalBottomSheetState()
@@ -644,43 +691,44 @@ fun AppContextMenuSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = DarkSurface,
-        contentColor = White,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(vertical = 12.dp)
-                    .size(width = 36.dp, height = 4.dp)
-                    .background(DotInactiveColor, RoundedCornerShape(2.dp))
-            )
-        }
+        containerColor = DarkSurface
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 32.dp, start = 20.dp, end = 20.dp)
         ) {
-            Text(
-                text = app.displayLabel.uppercase(),
-                color = White,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp
-            )
-            Text(
-                text = app.packageName,
-                color = DotInactiveColor,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
-            )
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DotMatrixAppIcon(app = app, sizeDp = 26.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = app.displayLabel.uppercase(),
+                        color = TextPrimary,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = app.packageName,
+                        color = TextSecondary,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp
+                    )
+                }
+            }
 
-            // Dynamic App Shortcuts Section
+            // App Dynamic Shortcuts
             if (shortcuts.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(14.dp))
                 Text(
-                    text = "// APP SHORTCUTS",
-                    color = accent.primaryColor,
+                    text = "SHORTCUTS",
+                    color = TextSecondary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -690,10 +738,7 @@ fun AppContextMenuSheet(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                onShortcutClick(shortcut)
-                                onDismiss()
-                            }
+                            .clickable { onShortcutClick(shortcut) }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -706,104 +751,84 @@ fun AppContextMenuSheet(
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = shortcut.displayLabel.uppercase(),
-                            color = White,
+                            color = TextPrimary,
                             fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
+                            fontSize = 13.sp
                         )
                     }
                 }
+                HorizontalDivider(color = DividerColor, thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = DividerColor)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ContextMenuAction(
-                icon = if (app.isFavorite) Icons.Default.StarBorder else Icons.Default.Star,
-                text = if (app.isFavorite) "UNPIN FROM HOME" else "PIN TO HOME",
-                color = if (app.isFavorite) accent.primaryColor else White,
-                onClick = {
-                    onToggleFavorite()
-                    onDismiss()
-                }
+            // Quick Actions List
+            ContextActionRow(
+                icon = if (app.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                title = if (app.isFavorite) "UNPIN FROM HOME" else "PIN TO FAVORITES",
+                onClick = onToggleFavorite
             )
 
-            ContextMenuAction(
-                icon = Icons.Default.Edit,
-                text = "RENAME APP",
-                color = White,
-                onClick = { onRename() }
-            )
-
-            ContextMenuAction(
+            ContextActionRow(
                 icon = Icons.Default.Brush,
-                text = "CUSTOMIZE ICON (STUDIO)",
-                color = accent.primaryColor,
-                onClick = onEditIcon
+                title = "CUSTOMIZE ICON (STUDIO)",
+                onClick = onOpenIconStudio
             )
 
-            ContextMenuAction(
+            ContextActionRow(
+                icon = Icons.Default.Edit,
+                title = "RENAME APPLICATION",
+                onClick = onRename
+            )
+
+            ContextActionRow(
                 icon = Icons.Default.VisibilityOff,
-                text = "HIDE FROM DRAWER",
-                color = White,
-                onClick = {
-                    onHide()
-                    onDismiss()
-                }
+                title = "HIDE APPLICATION",
+                onClick = onHide
             )
 
-            ContextMenuAction(
+            ContextActionRow(
                 icon = Icons.Default.Info,
-                text = "APP INFO",
-                color = White,
-                onClick = {
-                    onAppInfo()
-                    onDismiss()
-                }
+                title = "APPLICATION DETAILS",
+                onClick = onAppInfo
             )
 
-            ContextMenuAction(
+            ContextActionRow(
                 icon = Icons.Default.Delete,
-                text = "UNINSTALL",
-                color = AccentColor.CRIMSON.primaryColor,
-                onClick = {
-                    onUninstall()
-                    onDismiss()
-                }
+                title = "UNINSTALL APPLICATION",
+                onClick = onUninstall,
+                isDestructive = true
             )
         }
     }
 }
 
 @Composable
-private fun ContextMenuAction(
+private fun ContextActionRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    text: String,
-    color: androidx.compose.ui.graphics.Color,
-    onClick: () -> Unit
+    title: String,
+    onClick: () -> Unit,
+    isDestructive: Boolean = false
 ) {
+    val accent = LocalMatrixAccentColor.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 11.dp),
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = text,
-            tint = color,
-            modifier = Modifier.size(20.dp)
+            contentDescription = null,
+            tint = if (isDestructive) AccentColor.CRIMSON.primaryColor else accent.primaryColor,
+            modifier = Modifier.size(18.dp)
         )
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(14.dp))
         Text(
-            text = text,
-            color = color,
+            text = title,
+            color = if (isDestructive) AccentColor.CRIMSON.primaryColor else TextPrimary,
             fontFamily = FontFamily.Monospace,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 1.sp
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
@@ -815,7 +840,7 @@ fun AppRenameDialog(
     onConfirm: (String?) -> Unit
 ) {
     val accent = LocalMatrixAccentColor.current
-    var text by remember { mutableStateOf(app.customLabel ?: app.label) }
+    var labelInput by remember { mutableStateOf(app.customLabel ?: app.label) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -823,33 +848,32 @@ fun AppRenameDialog(
         title = {
             Text(
                 text = "RENAME APPLICATION",
-                color = White,
+                color = TextPrimary,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column {
                 Text(
-                    text = "ORIGINAL: ${app.label}",
-                    color = DotInactiveColor,
+                    text = "Original: ${app.label}",
+                    color = TextSecondary,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp
+                    fontSize = 11.sp
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 BasicTextField(
-                    value = text,
-                    onValueChange = { text = it },
+                    value = labelInput,
+                    onValueChange = { labelInput = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(SurfaceCard, shape = RoundedCornerShape(4.dp))
-                        .padding(12.dp),
+                        .background(SurfaceCard, RoundedCornerShape(4.dp))
+                        .padding(10.dp),
                     textStyle = TextStyle(
-                        color = White,
+                        color = TextPrimary,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 15.sp
+                        fontSize = 14.sp
                     ),
                     cursorBrush = SolidColor(accent.primaryColor),
                     singleLine = true
@@ -859,8 +883,8 @@ fun AppRenameDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    onConfirm(text.trim().takeIf { it.isNotBlank() && it != app.label })
-                    onDismiss()
+                    val finalLabel = labelInput.trim()
+                    onConfirm(if (finalLabel == app.label || finalLabel.isEmpty()) null else finalLabel)
                 }
             ) {
                 Text(
@@ -872,28 +896,12 @@ fun AppRenameDialog(
             }
         },
         dismissButton = {
-            Row {
-                if (app.customLabel != null) {
-                    TextButton(
-                        onClick = {
-                            onConfirm(null)
-                            onDismiss()
-                        }
-                    ) {
-                        Text(
-                            text = "RESET",
-                            color = OffWhite,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
-                }
-                TextButton(onClick = onDismiss) {
-                    Text(
-                        text = "CANCEL",
-                        color = DotInactiveColor,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "CANCEL",
+                    color = TextSecondary,
+                    fontFamily = FontFamily.Monospace
+                )
             }
         }
     )

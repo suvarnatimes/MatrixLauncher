@@ -24,13 +24,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Brush
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -40,6 +38,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -79,10 +78,12 @@ import com.matrixlauncher.ui.graphics.DotMatrixAppIcon
 import com.matrixlauncher.ui.theme.Black
 import com.matrixlauncher.ui.theme.DarkSurface
 import com.matrixlauncher.ui.theme.DividerColor
-import com.matrixlauncher.ui.theme.DotInactiveColor
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
 import com.matrixlauncher.ui.theme.OffWhite
 import com.matrixlauncher.ui.theme.SurfaceCard
+import com.matrixlauncher.ui.theme.TextMuted
+import com.matrixlauncher.ui.theme.TextPrimary
+import com.matrixlauncher.ui.theme.TextSecondary
 import com.matrixlauncher.ui.theme.White
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,7 +120,6 @@ fun SettingsScreen(
     onSetDefaultLauncher: () -> Unit,
     onBackClick: () -> Unit
 ) {
-    val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val accent = LocalMatrixAccentColor.current
     var showHiddenAppsSheet by remember { mutableStateOf(false) }
@@ -146,14 +146,14 @@ fun SettingsScreen(
             ) {
                 IconButton(onClick = onBackClick) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = White
+                        tint = TextPrimary
                     )
                 }
                 Text(
                     text = "MATRIX SETTINGS",
-                    color = White,
+                    color = TextPrimary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
@@ -198,14 +198,14 @@ fun SettingsScreen(
                                 Column {
                                     Text(
                                         text = if (isDefaultLauncher) "MATRIX LAUNCHER IS ACTIVE" else "NOT SET AS DEFAULT",
-                                        color = White,
+                                        color = TextPrimary,
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
                                         text = if (isDefaultLauncher) "Tap to change default home app" else "Tap to enable as default home launcher",
-                                        color = DotInactiveColor,
+                                        color = TextSecondary,
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 11.sp
                                     )
@@ -251,14 +251,14 @@ fun SettingsScreen(
                                 Column {
                                     Text(
                                         text = "CUSTOMIZE APP ICONS (STUDIO)",
-                                        color = White,
+                                        color = TextPrimary,
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
                                         text = "Upload custom PNG/JPEG, pixelate to LED dots & colors",
-                                        color = DotInactiveColor,
+                                        color = TextSecondary,
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 11.sp
                                     )
@@ -278,7 +278,7 @@ fun SettingsScreen(
 
                     Text(
                         text = "GLOBAL ICON THEME",
-                        color = DotInactiveColor,
+                        color = TextPrimary,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -307,16 +307,16 @@ fun SettingsScreen(
                                 Column {
                                     Text(
                                         text = style.label,
-                                        color = if (isSelected) accent.primaryColor else White,
+                                        color = if (isSelected) accent.primaryColor else TextPrimary,
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
                                         text = style.description,
-                                        color = DotInactiveColor,
+                                        color = TextSecondary,
                                         fontFamily = FontFamily.Monospace,
-                                        fontSize = 9.sp
+                                        fontSize = 10.sp
                                     )
                                 }
                             }
@@ -330,19 +330,19 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     GestureRowItem(
-                        gestureLabel = "SWIPE DOWN (1 FINGER)",
-                        currentAction = settings.swipeDownAction,
-                        allApps = allApps,
-                        onActionChange = { onUpdateGestureAction("SWIPE_DOWN", it) },
-                        onPickApp = { gestureKeyForAppPick = "SWIPE_DOWN" }
-                    )
-
-                    GestureRowItem(
                         gestureLabel = "SWIPE UP (1 FINGER)",
                         currentAction = settings.swipeUpAction,
                         allApps = allApps,
                         onActionChange = { onUpdateGestureAction("SWIPE_UP", it) },
                         onPickApp = { gestureKeyForAppPick = "SWIPE_UP" }
+                    )
+
+                    GestureRowItem(
+                        gestureLabel = "SWIPE DOWN (1 FINGER)",
+                        currentAction = settings.swipeDownAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("SWIPE_DOWN", it) },
+                        onPickApp = { gestureKeyForAppPick = "SWIPE_DOWN" }
                     )
 
                     GestureRowItem(
@@ -370,6 +370,22 @@ fun SettingsScreen(
                     )
 
                     GestureRowItem(
+                        gestureLabel = "TWO-FINGER SWIPE UP",
+                        currentAction = settings.twoFingerSwipeUpAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("TWO_FINGER_SWIPE_UP", it) },
+                        onPickApp = { gestureKeyForAppPick = "TWO_FINGER_SWIPE_UP" }
+                    )
+
+                    GestureRowItem(
+                        gestureLabel = "TWO-FINGER SWIPE DOWN",
+                        currentAction = settings.twoFingerSwipeDownAction,
+                        allApps = allApps,
+                        onActionChange = { onUpdateGestureAction("TWO_FINGER_SWIPE_DOWN", it) },
+                        onPickApp = { gestureKeyForAppPick = "TWO_FINGER_SWIPE_DOWN" }
+                    )
+
+                    GestureRowItem(
                         gestureLabel = "PINCH IN (ZOOM IN - 2 FINGERS)",
                         currentAction = settings.pinchInAction,
                         allApps = allApps,
@@ -383,22 +399,6 @@ fun SettingsScreen(
                         allApps = allApps,
                         onActionChange = { onUpdateGestureAction("PINCH_OUT", it) },
                         onPickApp = { gestureKeyForAppPick = "PINCH_OUT" }
-                    )
-
-                    GestureRowItem(
-                        gestureLabel = "TWO-FINGER SWIPE DOWN",
-                        currentAction = settings.twoFingerSwipeDownAction,
-                        allApps = allApps,
-                        onActionChange = { onUpdateGestureAction("TWO_FINGER_SWIPE_DOWN", it) },
-                        onPickApp = { gestureKeyForAppPick = "TWO_FINGER_SWIPE_DOWN" }
-                    )
-
-                    GestureRowItem(
-                        gestureLabel = "TWO-FINGER SWIPE UP",
-                        currentAction = settings.twoFingerSwipeUpAction,
-                        allApps = allApps,
-                        onActionChange = { onUpdateGestureAction("TWO_FINGER_SWIPE_UP", it) },
-                        onPickApp = { gestureKeyForAppPick = "TWO_FINGER_SWIPE_UP" }
                     )
 
                     SettingsToggleRow(
@@ -466,7 +466,7 @@ fun SettingsScreen(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = colorOption.displayName,
-                                        color = if (isSelected) accent.primaryColor else White,
+                                        color = if (isSelected) accent.primaryColor else TextPrimary,
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
@@ -482,7 +482,7 @@ fun SettingsScreen(
                     SettingsSectionHeader(title = "DOT MATRIX GRID")
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(text = "DOT SHAPE", color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                    Text(text = "DOT SHAPE", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -508,7 +508,7 @@ fun SettingsScreen(
                             ) {
                                 Text(
                                     text = shape.label,
-                                    color = if (isSelected) accent.primaryColor else White,
+                                    color = if (isSelected) accent.primaryColor else TextPrimary,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
@@ -541,7 +541,7 @@ fun SettingsScreen(
 
                     Text(
                         text = "MAX PINNED FAVORITES: ${settings.maxFavoritesCount}",
-                        color = White,
+                        color = TextPrimary,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 13.sp
                     )
@@ -575,7 +575,7 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 text = "HIDDEN APPS (${hiddenApps.size})",
-                                color = White,
+                                color = TextPrimary,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 14.sp
                             )
@@ -609,7 +609,7 @@ fun SettingsScreen(
                                 showExportDialog = true
                             },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = White),
+                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = TextPrimary),
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Icon(imageVector = Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -620,7 +620,7 @@ fun SettingsScreen(
                         Button(
                             onClick = { showImportDialog = true },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = White),
+                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = TextPrimary),
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Icon(imageVector = Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -661,10 +661,10 @@ fun SettingsScreen(
             AlertDialog(
                 onDismissRequest = { showExportDialog = false },
                 containerColor = DarkSurface,
-                title = { Text(text = "EXPORT CONFIGURATION", color = White, fontFamily = FontFamily.Monospace) },
+                title = { Text(text = "EXPORT CONFIGURATION", color = TextPrimary, fontFamily = FontFamily.Monospace) },
                 text = {
                     Column {
-                        Text(text = "JSON configuration string:", color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                        Text(text = "JSON configuration string:", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(text = exportedJsonText, color = OffWhite, fontFamily = FontFamily.Monospace, fontSize = 10.sp, maxLines = 8)
                     }
@@ -681,7 +681,7 @@ fun SettingsScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showExportDialog = false }) {
-                        Text(text = "CLOSE", color = DotInactiveColor, fontFamily = FontFamily.Monospace)
+                        Text(text = "CLOSE", color = TextSecondary, fontFamily = FontFamily.Monospace)
                     }
                 }
             )
@@ -693,10 +693,10 @@ fun SettingsScreen(
             AlertDialog(
                 onDismissRequest = { showImportDialog = false },
                 containerColor = DarkSurface,
-                title = { Text(text = "IMPORT CONFIGURATION", color = White, fontFamily = FontFamily.Monospace) },
+                title = { Text(text = "IMPORT CONFIGURATION", color = TextPrimary, fontFamily = FontFamily.Monospace) },
                 text = {
                     Column {
-                        Text(text = "Paste JSON configuration string below:", color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                        Text(text = "Paste JSON configuration string below:", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         BasicTextField(
                             value = importInputText,
@@ -706,7 +706,7 @@ fun SettingsScreen(
                                 .height(120.dp)
                                 .background(SurfaceCard, RoundedCornerShape(4.dp))
                                 .padding(8.dp),
-                            textStyle = TextStyle(color = White, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                            textStyle = TextStyle(color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
                             cursorBrush = SolidColor(accent.primaryColor)
                         )
                     }
@@ -723,7 +723,7 @@ fun SettingsScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showImportDialog = false }) {
-                        Text(text = "CANCEL", color = DotInactiveColor, fontFamily = FontFamily.Monospace)
+                        Text(text = "CANCEL", color = TextSecondary, fontFamily = FontFamily.Monospace)
                     }
                 }
             )
@@ -744,9 +744,9 @@ private fun GestureRowItem(
     var expanded by remember { mutableStateOf(false) }
 
     val presetOptions = listOf(
+        "OPEN_DRAWER" to "OPEN ALL APPLICATIONS",
         "OPEN_APP" to "LAUNCH SPECIFIC APP...",
         "EXPAND_NOTIFICATIONS" to "EXPAND NOTIFICATIONS",
-        "OPEN_DRAWER" to "OPEN APP DRAWER",
         "OPEN_SEARCH" to "OPEN SEARCH",
         "OPEN_SETTINGS" to "OPEN SETTINGS",
         "TOGGLE_TORCH" to "TOGGLE FLASHLIGHT",
@@ -769,7 +769,7 @@ private fun GestureRowItem(
             .fillMaxWidth()
             .padding(vertical = 6.dp)
     ) {
-        Text(text = gestureLabel, color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+        Text(text = gestureLabel, color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
         Spacer(modifier = Modifier.height(4.dp))
         ExposedDropdownMenuBox(
             expanded = expanded,
@@ -778,7 +778,7 @@ private fun GestureRowItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                     .background(DarkSurface, RoundedCornerShape(4.dp))
                     .border(1.dp, DividerColor, RoundedCornerShape(4.dp))
                     .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -788,7 +788,7 @@ private fun GestureRowItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = currentDisplay, color = White, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(text = currentDisplay, color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 }
             }
@@ -803,7 +803,7 @@ private fun GestureRowItem(
                         text = {
                             Text(
                                 text = label,
-                                color = if (actionCode == "OPEN_APP") accent.primaryColor else White,
+                                color = if (actionCode == "OPEN_APP") accent.primaryColor else TextPrimary,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
                                 fontWeight = if (actionCode == "OPEN_APP") FontWeight.Bold else FontWeight.Normal
@@ -849,7 +849,7 @@ private fun AppPickerBottomSheet(
                 .fillMaxWidth()
                 .padding(bottom = 32.dp, start = 20.dp, end = 20.dp)
         ) {
-            Text(text = "SELECT APP FOR GESTURE", color = White, fontFamily = FontFamily.Monospace, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(text = "SELECT APP FOR GESTURE", color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(10.dp))
 
             Box(
@@ -862,9 +862,9 @@ private fun AppPickerBottomSheet(
                     value = search,
                     onValueChange = { search = it },
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(color = White, fontFamily = FontFamily.Monospace, fontSize = 13.sp),
+                    textStyle = TextStyle(color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 13.sp),
                     decorationBox = { inner ->
-                        if (search.isEmpty()) Text(text = "Search apps...", color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                        if (search.isEmpty()) Text(text = "Search apps...", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
                         inner()
                     }
                 )
@@ -883,7 +883,7 @@ private fun AppPickerBottomSheet(
                     ) {
                         DotMatrixAppIcon(app = app, sizeDp = 22.dp)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(text = app.displayLabel.uppercase(), color = White, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                        Text(text = app.displayLabel.uppercase(), color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
                     }
                 }
             }
@@ -920,8 +920,8 @@ private fun SettingsToggleRow(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = White, fontFamily = FontFamily.Monospace, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(text = subtitle, color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+            Text(text = title, color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(text = subtitle, color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
         }
         Switch(
             checked = checked,
@@ -929,7 +929,7 @@ private fun SettingsToggleRow(
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Black,
                 checkedTrackColor = accent.primaryColor,
-                uncheckedThumbColor = DotInactiveColor,
+                uncheckedThumbColor = TextMuted,
                 uncheckedTrackColor = DarkSurface
             )
         )
@@ -956,11 +956,11 @@ private fun HiddenAppsSheet(
                 .fillMaxWidth()
                 .padding(bottom = 32.dp, start = 20.dp, end = 20.dp)
         ) {
-            Text(text = "HIDDEN APPLICATIONS", color = White, fontFamily = FontFamily.Monospace, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(text = "HIDDEN APPLICATIONS", color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(14.dp))
 
             if (hiddenApps.isEmpty()) {
-                Text(text = "NO HIDDEN APPS", color = DotInactiveColor, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                Text(text = "NO HIDDEN APPS", color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
             } else {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(hiddenApps) { app ->
@@ -971,7 +971,7 @@ private fun HiddenAppsSheet(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(text = app.displayLabel.uppercase(), color = White, fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                            Text(text = app.displayLabel.uppercase(), color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                             TextButton(onClick = { onUnhideApp(app.packageName) }) {
                                 Text(text = "UNHIDE", color = accent.primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                             }
