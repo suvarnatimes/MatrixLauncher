@@ -17,7 +17,7 @@ enum class AccentColor(val displayName: String, val primaryColor: Color) {
     CYAN("CYAN", AccentCyan),
     PURPLE("PURPLE", AccentPurple),
     WHITE("WHITE", AccentWhite),
-    CUSTOM("CUSTOM", AccentRed)
+    CUSTOM("CUSTOM", AccentEmerald)
 }
 
 enum class DotDensity(val label: String, val dotRadiusDp: Float, val spacingDp: Float) {
@@ -40,9 +40,9 @@ enum class IconStyle(val label: String, val description: String) {
 }
 
 enum class HomeWidgetType(val title: String, val description: String) {
-    COMBINED_HERO("HERO CLOCK & NAME", "Date + Big Name + Time + Battery (as in screenshot)"),
+    COMBINED_HERO("HERO CLOCK & NAME", "Date + Double-Lined Name + Time + Battery (as in screenshot)"),
     JESUS_CROSS("JESUS CROSS", "Double-bordered outline cross, triple crosses, or radiant Celtic cross"),
-    CUSTOM_NAME("STANDALONE BIG NAME", "3 styles: Bold Monolith, Framed Badge, or Cyber Flanked"),
+    CUSTOM_NAME("STANDALONE BIG NAME", "3 styles: Double-Lined Monolith, Framed Badge, or Cyber Flanked"),
     CLOCK("STANDALONE CLOCK", "3 styles: Classic Digital, Stacked 2-Line, or Compact"),
     WEATHER("LIVE WEATHER GLANCE", "Current temperature, LED condition, and humidity"),
     TELEMETRY("DEVICE TELEMETRY", "Storage meter, RAM usage, and battery gauge"),
@@ -104,14 +104,14 @@ data class LauncherSettings(
             id = "hero_clock",
             type = HomeWidgetType.COMBINED_HERO,
             xPercent = 0.5f,
-            yPercent = 0.16f,
+            yPercent = 0.14f,
             styleIndex = 0
         ),
         PlacedWidget(
             id = "jesus_cross",
             type = HomeWidgetType.JESUS_CROSS,
             xPercent = 0.5f,
-            yPercent = 0.56f,
+            yPercent = 0.52f,
             styleIndex = 0
         )
     ),
@@ -140,6 +140,10 @@ data class LauncherSettings(
     val nameStyleIndex: Int = 0,
     val crossStyleIndex: Int = 0,
     val clockStyleIndex: Int = 0,
+    val crossSizeScale: Float = 1.35f,
+
+    // Battery Saver
+    val batterySaverEnabled: Boolean = false,
 
     val is24HourClock: Boolean = true,
     val showScreenTimeGlance: Boolean = true,

@@ -89,8 +89,8 @@ fun MatrixLauncherApp(
             DotGridBackground(
                 dotDensity = uiState.settings.dotDensity,
                 dotShape = uiState.settings.dotShape,
-                enableShader = uiState.settings.agslShaderEnabled,
-                enableCrtScanlines = uiState.settings.enableCrtScanlines
+                enableShader = uiState.settings.agslShaderEnabled && !uiState.settings.batterySaverEnabled,
+                enableCrtScanlines = uiState.settings.enableCrtScanlines && !uiState.settings.batterySaverEnabled
             )
 
             // Animated Screen Switching
@@ -118,6 +118,7 @@ fun MatrixLauncherApp(
                             nameStyleIndex = uiState.settings.nameStyleIndex,
                             crossStyleIndex = uiState.settings.crossStyleIndex,
                             clockStyleIndex = uiState.settings.clockStyleIndex,
+                            crossSizeScale = uiState.settings.crossSizeScale,
                             iconStyle = uiState.settings.iconStyle,
                             dotShape = uiState.settings.dotShape,
                             placedWidgets = uiState.settings.placedWidgets,
@@ -268,6 +269,12 @@ fun MatrixLauncherApp(
                             },
                             onClockStyleChange = { index ->
                                 viewModel.onIntent(LauncherIntent.SetClockStyleIndex(index))
+                            },
+                            onCrossSizeScaleChange = { scale ->
+                                viewModel.onIntent(LauncherIntent.SetCrossSizeScale(scale))
+                            },
+                            onToggleBatterySaver = { enabled ->
+                                viewModel.onIntent(LauncherIntent.ToggleBatterySaver(enabled))
                             },
                             onOpenIconStudio = {
                                 viewModel.onIntent(LauncherIntent.NavigateTo(LauncherScreen.ICON_STUDIO))

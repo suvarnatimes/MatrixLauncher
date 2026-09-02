@@ -86,6 +86,8 @@ sealed interface LauncherIntent {
     data class SetNameStyleIndex(val index: Int) : LauncherIntent
     data class SetCrossStyleIndex(val index: Int) : LauncherIntent
     data class SetClockStyleIndex(val index: Int) : LauncherIntent
+    data class SetCrossSizeScale(val scale: Float) : LauncherIntent
+    data class ToggleBatterySaver(val enabled: Boolean) : LauncherIntent
 
     // Icon Customization Studio
     data class UpdateIconStyle(val style: IconStyle) : LauncherIntent

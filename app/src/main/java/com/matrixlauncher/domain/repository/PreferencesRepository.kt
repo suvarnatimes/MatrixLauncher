@@ -34,6 +34,8 @@ interface PreferencesRepository {
     suspend fun setNameStyleIndex(index: Int)
     suspend fun setCrossStyleIndex(index: Int)
     suspend fun setClockStyleIndex(index: Int)
+    suspend fun setCrossSizeScale(scale: Float)
+    suspend fun setBatterySaverEnabled(enabled: Boolean)
 
     suspend fun setSearchProvider(provider: WebSearchProvider)
     suspend fun set24HourClock(is24Hour: Boolean)

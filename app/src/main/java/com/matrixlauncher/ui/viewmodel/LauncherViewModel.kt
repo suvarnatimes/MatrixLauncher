@@ -105,6 +105,8 @@ class LauncherViewModel @Inject constructor(
             is LauncherIntent.SetNameStyleIndex -> setNameStyleIndex(intent.index)
             is LauncherIntent.SetCrossStyleIndex -> setCrossStyleIndex(intent.index)
             is LauncherIntent.SetClockStyleIndex -> setClockStyleIndex(intent.index)
+            is LauncherIntent.SetCrossSizeScale -> setCrossSizeScale(intent.scale)
+            is LauncherIntent.ToggleBatterySaver -> toggleBatterySaver(intent.enabled)
 
             // Icon Customization Studio
             is LauncherIntent.UpdateIconStyle -> updateIconStyle(intent.style)
@@ -164,6 +166,10 @@ class LauncherViewModel @Inject constructor(
                     val isOn = launcherAppsRepository.toggleTorch()
                     emitEffect(LauncherEffect.ShowToast(if (isOn) "TORCH [ON]" else "TORCH [OFF]"))
                 }
+                actionString == "TOGGLE_BATTERY_SAVER" -> {
+                    val current = _uiState.value.settings.batterySaverEnabled
+                    toggleBatterySaver(!current)
+                }
                 actionString == "OPEN_CAMERA" -> launcherAppsRepository.launchCamera()
                 actionString == "LOCK_SCREEN" -> emitEffect(LauncherEffect.ShowToast("Locking screen"))
                 else -> {}
@@ -211,6 +217,18 @@ class LauncherViewModel @Inject constructor(
     private fun setClockStyleIndex(index: Int) = viewModelScope.launch {
         preferencesRepository.setClockStyleIndex(index)
         emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+    }
+
+    private fun setCrossSizeScale(scale: Float) = viewModelScope.launch {
+        preferencesRepository.setCrossSizeScale(scale)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+        emitEffect(LauncherEffect.ShowToast("CROSS SIZE ADJUSTED"))
+    }
+
+    private fun toggleBatterySaver(enabled: Boolean) = viewModelScope.launch {
+        preferencesRepository.setBatterySaverEnabled(enabled)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.HEAVY_CLICK))
+        emitEffect(LauncherEffect.ShowToast(if (enabled) "BATTERY SAVER [ON]" else "BATTERY SAVER [OFF]"))
     }
 
     private fun checkDefaultLauncherStatus() {

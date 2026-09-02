@@ -43,6 +43,8 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun setNameStyleIndex(index: Int) = preferencesManager.setNameStyleIndex(index)
     override suspend fun setCrossStyleIndex(index: Int) = preferencesManager.setCrossStyleIndex(index)
     override suspend fun setClockStyleIndex(index: Int) = preferencesManager.setClockStyleIndex(index)
+    override suspend fun setCrossSizeScale(scale: Float) = preferencesManager.setCrossSizeScale(scale)
+    override suspend fun setBatterySaverEnabled(enabled: Boolean) = preferencesManager.setBatterySaverEnabled(enabled)
 
     override suspend fun setSearchProvider(provider: WebSearchProvider) = preferencesManager.setSearchProvider(provider)
     override suspend fun set24HourClock(is24Hour: Boolean) = preferencesManager.set24HourClock(is24Hour)

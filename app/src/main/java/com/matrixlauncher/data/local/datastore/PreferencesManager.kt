@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -62,6 +63,8 @@ class PreferencesManager @Inject constructor(
         val KEY_NAME_STYLE_INDEX = intPreferencesKey("name_style_index")
         val KEY_CROSS_STYLE_INDEX = intPreferencesKey("cross_style_index")
         val KEY_CLOCK_STYLE_INDEX = intPreferencesKey("clock_style_index")
+        val KEY_CROSS_SIZE_SCALE = floatPreferencesKey("cross_size_scale")
+        val KEY_BATTERY_SAVER = booleanPreferencesKey("battery_saver_enabled")
 
         val KEY_SEARCH_PROVIDER = stringPreferencesKey("search_provider")
         val KEY_24_HOUR_CLOCK = booleanPreferencesKey("is_24_hour_clock")
@@ -106,6 +109,8 @@ class PreferencesManager @Inject constructor(
 
             val providerName = prefs[PreferencesKeys.KEY_SEARCH_PROVIDER] ?: WebSearchProvider.DUCK_DUCK_GO.name
             val provider = try { WebSearchProvider.valueOf(providerName) } catch (e: Exception) { WebSearchProvider.DUCK_DUCK_GO }
+
+            val isBatterySaver = prefs[PreferencesKeys.KEY_BATTERY_SAVER] ?: false
 
             // Placed widgets JSON deserialization
             val placedJson = prefs[PreferencesKeys.KEY_PLACED_WIDGETS_JSON]
@@ -161,15 +166,17 @@ class PreferencesManager @Inject constructor(
                 nameStyleIndex = prefs[PreferencesKeys.KEY_NAME_STYLE_INDEX] ?: 0,
                 crossStyleIndex = prefs[PreferencesKeys.KEY_CROSS_STYLE_INDEX] ?: 0,
                 clockStyleIndex = prefs[PreferencesKeys.KEY_CLOCK_STYLE_INDEX] ?: 0,
+                crossSizeScale = prefs[PreferencesKeys.KEY_CROSS_SIZE_SCALE] ?: 1.35f,
+                batterySaverEnabled = isBatterySaver,
                 defaultSearchProvider = provider,
                 is24HourClock = prefs[PreferencesKeys.KEY_24_HOUR_CLOCK] ?: true,
                 showScreenTimeGlance = prefs[PreferencesKeys.KEY_SCREEN_TIME_GLANCE] ?: true,
                 showBatteryDotBar = prefs[PreferencesKeys.KEY_BATTERY_DOT_BAR] ?: true,
                 showScratchpad = prefs[PreferencesKeys.KEY_SHOW_SCRATCHPAD] ?: true,
                 scratchpadNote = prefs[PreferencesKeys.KEY_SCRATCHPAD_NOTE] ?: "TAP TO WRITE NOTE",
-                hapticsEnabled = prefs[PreferencesKeys.KEY_HAPTICS_ENABLED] ?: true,
-                agslShaderEnabled = prefs[PreferencesKeys.KEY_SHADER_ENABLED] ?: true,
-                enableCrtScanlines = prefs[PreferencesKeys.KEY_CRT_SCANLINES] ?: true,
+                hapticsEnabled = if (isBatterySaver) false else (prefs[PreferencesKeys.KEY_HAPTICS_ENABLED] ?: true),
+                agslShaderEnabled = if (isBatterySaver) false else (prefs[PreferencesKeys.KEY_SHADER_ENABLED] ?: true),
+                enableCrtScanlines = if (isBatterySaver) false else (prefs[PreferencesKeys.KEY_CRT_SCANLINES] ?: true),
                 autoFocusSearch = prefs[PreferencesKeys.KEY_AUTO_FOCUS_SEARCH] ?: false,
                 maxFavoritesCount = prefs[PreferencesKeys.KEY_MAX_FAVORITES] ?: 8,
                 mindfulPauseSeconds = prefs[PreferencesKeys.KEY_MINDFUL_PAUSE] ?: 0,
@@ -183,14 +190,14 @@ class PreferencesManager @Inject constructor(
             id = "hero_clock",
             type = HomeWidgetType.COMBINED_HERO,
             xPercent = 0.5f,
-            yPercent = 0.16f,
+            yPercent = 0.14f,
             styleIndex = 0
         ),
         PlacedWidget(
             id = "jesus_cross",
             type = HomeWidgetType.JESUS_CROSS,
             xPercent = 0.5f,
-            yPercent = 0.56f,
+            yPercent = 0.52f,
             styleIndex = 0
         )
     )
@@ -231,6 +238,8 @@ class PreferencesManager @Inject constructor(
     suspend fun setNameStyleIndex(index: Int) = edit { it[PreferencesKeys.KEY_NAME_STYLE_INDEX] = index }
     suspend fun setCrossStyleIndex(index: Int) = edit { it[PreferencesKeys.KEY_CROSS_STYLE_INDEX] = index }
     suspend fun setClockStyleIndex(index: Int) = edit { it[PreferencesKeys.KEY_CLOCK_STYLE_INDEX] = index }
+    suspend fun setCrossSizeScale(scale: Float) = edit { it[PreferencesKeys.KEY_CROSS_SIZE_SCALE] = scale.coerceIn(0.8f, 2.4f) }
+    suspend fun setBatterySaverEnabled(enabled: Boolean) = edit { it[PreferencesKeys.KEY_BATTERY_SAVER] = enabled }
 
     suspend fun setSearchProvider(provider: WebSearchProvider) = edit { it[PreferencesKeys.KEY_SEARCH_PROVIDER] = provider.name }
     suspend fun set24HourClock(is24Hour: Boolean) = edit { it[PreferencesKeys.KEY_24_HOUR_CLOCK] = is24Hour }

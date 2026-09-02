@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
@@ -35,7 +36,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MenuAnchorType
@@ -56,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -67,7 +66,6 @@ import com.matrixlauncher.domain.model.AccentColor
 import com.matrixlauncher.domain.model.AppModel
 import com.matrixlauncher.domain.model.DotDensity
 import com.matrixlauncher.domain.model.DotShape
-import com.matrixlauncher.domain.model.HomeWidgetType
 import com.matrixlauncher.domain.model.IconStyle
 import com.matrixlauncher.domain.model.LauncherSettings
 import com.matrixlauncher.domain.model.ScrollerAlignment
@@ -79,9 +77,7 @@ import com.matrixlauncher.ui.theme.Black
 import com.matrixlauncher.ui.theme.DarkSurface
 import com.matrixlauncher.ui.theme.DividerColor
 import com.matrixlauncher.ui.theme.LocalMatrixAccentColor
-import com.matrixlauncher.ui.theme.OffWhite
 import com.matrixlauncher.ui.theme.SurfaceCard
-import com.matrixlauncher.ui.theme.TextMuted
 import com.matrixlauncher.ui.theme.TextPrimary
 import com.matrixlauncher.ui.theme.TextSecondary
 import com.matrixlauncher.ui.theme.White
@@ -104,6 +100,8 @@ fun SettingsScreen(
     onNameStyleChange: (Int) -> Unit = {},
     onCrossStyleChange: (Int) -> Unit = {},
     onClockStyleChange: (Int) -> Unit = {},
+    onCrossSizeScaleChange: (Float) -> Unit = {},
+    onToggleBatterySaver: (Boolean) -> Unit = {},
     onOpenIconStudio: () -> Unit,
     onScrollerAlignmentChange: (ScrollerAlignment) -> Unit,
     onUpdateGestureAction: (gestureKey: String, actionString: String) -> Unit,
@@ -125,7 +123,6 @@ fun SettingsScreen(
 ) {
     val clipboardManager = LocalClipboardManager.current
     val accent = LocalMatrixAccentColor.current
-    var showHiddenAppsSheet by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
     var exportedJsonText by remember { mutableStateOf("") }
@@ -234,14 +231,14 @@ fun SettingsScreen(
                             .padding(12.dp)
                     ) {
                         Text(
-                            text = "CUSTOM USER NAME",
+                            text = "CUSTOM USER NAME (DOUBLE-LINED)",
                             color = TextPrimary,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Displays large in the center of the Hero Date+Name+Time widget and standalone Name widgets",
+                            text = "Displays large in 2-dot thick bold double-lined letters in the Hero Date+Name+Time widget",
                             color = TextSecondary,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp
@@ -290,13 +287,61 @@ fun SettingsScreen(
                         onSelect = onCrossStyleChange
                     )
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Cross Size Adjuster Slider
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(SurfaceCard, RoundedCornerShape(6.dp))
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "CROSS SIZE SCALE",
+                                color = TextPrimary,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${(settings.crossSizeScale * 100).toInt()}%",
+                                color = accent.primaryColor,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Text(
+                            text = "Adjust cross size from compact to grand imposing size",
+                            color = TextSecondary,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp
+                        )
+                        Slider(
+                            value = settings.crossSizeScale,
+                            onValueChange = onCrossSizeScaleChange,
+                            valueRange = 0.8f..2.2f,
+                            steps = 14,
+                            colors = SliderDefaults.colors(
+                                thumbColor = accent.primaryColor,
+                                activeTrackColor = accent.primaryColor,
+                                inactiveTrackColor = DarkSurface
+                            )
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // Standalone Name Design (3 styles)
                     SettingsStyleSelector(
                         title = "STANDALONE NAME DESIGN",
                         description = "Style for standalone big name widget",
-                        options = listOf("BOLD MONOLITH", "FRAMED BADGE", "CYBER FLANKED"),
+                        options = listOf("DOUBLE-LINED BOLD", "FRAMED BADGE", "CYBER FLANKED"),
                         selectedIndex = settings.nameStyleIndex % 3,
                         onSelect = onNameStyleChange
                     )
@@ -313,7 +358,20 @@ fun SettingsScreen(
                     )
                 }
 
-                // Section 2: ICON STUDIO & ICON STYLES
+                // Section 2: POWER & BATTERY SAVER MODE
+                item {
+                    SettingsSectionHeader(title = "POWER & BATTERY OPTIMIZATION")
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    SettingsToggleRow(
+                        title = "ULTRA BATTERY SAVER MODE",
+                        subtitle = "Disables shaders/CRT scanlines, runs on pure pitch-black OLED background to maximize battery life",
+                        checked = settings.batterySaverEnabled,
+                        onCheckedChange = onToggleBatterySaver
+                    )
+                }
+
+                // Section 3: ICON STUDIO & ICON STYLES
                 item {
                     SettingsSectionHeader(title = "APP ICONS & ICON STUDIO")
                     Spacer(modifier = Modifier.height(10.dp))
@@ -415,7 +473,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section 3: GESTURES & MULTI-TOUCH CONTROLS
+                // Section 4: GESTURES & MULTI-TOUCH CONTROLS
                 item {
                     SettingsSectionHeader(title = "GESTURES & MULTI-TOUCH CONTROLS")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -500,7 +558,7 @@ fun SettingsScreen(
                     )
                 }
 
-                // Section 4: THEME & COLOR PALETTE
+                // Section 5: THEME & COLOR PALETTE
                 item {
                     SettingsSectionHeader(title = "LED ACCENT COLOR")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -544,7 +602,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section 5: DOT GRID MATRIX CALIBRATION
+                // Section 6: DOT GRID MATRIX CALIBRATION
                 item {
                     SettingsSectionHeader(title = "BACKGROUND DOT GRID MATRIX")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -638,7 +696,7 @@ fun SettingsScreen(
                     )
                 }
 
-                // Section 6: TIME & GENERAL SETTINGS
+                // Section 7: GENERAL PREFERENCES
                 item {
                     SettingsSectionHeader(title = "GENERAL PREFERENCES")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -665,7 +723,7 @@ fun SettingsScreen(
                     )
                 }
 
-                // Section 7: BACKUP & EXPORT/IMPORT
+                // Section 8: BACKUP & RESTORE
                 item {
                     SettingsSectionHeader(title = "BACKUP & RESTORE")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -934,6 +992,7 @@ private fun GestureRowItem(
         "OPEN_SEARCH" to "OPEN QUICK SEARCH",
         "OPEN_SETTINGS" to "OPEN LAUNCHER SETTINGS",
         "TOGGLE_TORCH" to "TOGGLE FLASHLIGHT",
+        "TOGGLE_BATTERY_SAVER" to "TOGGLE BATTERY SAVER",
         "OPEN_CAMERA" to "OPEN CAMERA",
         "LOCK_SCREEN" to "LOCK SCREEN",
         "NONE" to "DO NOTHING"

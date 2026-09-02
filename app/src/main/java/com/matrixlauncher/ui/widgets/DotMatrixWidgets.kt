@@ -71,6 +71,9 @@ import com.matrixlauncher.ui.graphics.DotMatrixCanvas.calculateDotMatrixTextHeig
 import com.matrixlauncher.ui.graphics.DotMatrixCanvas.calculateDotMatrixTextWidth
 import com.matrixlauncher.ui.graphics.DotMatrixCanvas.drawDotBar
 import com.matrixlauncher.ui.graphics.DotMatrixCanvas.drawDotMatrixText
+import com.matrixlauncher.ui.graphics.DoubleLinedDotMatrixFont.calculateDoubleLinedTextHeight
+import com.matrixlauncher.ui.graphics.DoubleLinedDotMatrixFont.calculateDoubleLinedTextWidth
+import com.matrixlauncher.ui.graphics.DoubleLinedDotMatrixFont.drawDoubleLinedText
 import com.matrixlauncher.ui.home.DotMatrixClock
 import com.matrixlauncher.ui.theme.Black
 import com.matrixlauncher.ui.theme.DarkSurface
@@ -99,6 +102,7 @@ fun FreeFormWidgetsContainer(
     nameStyleIndex: Int,
     crossStyleIndex: Int,
     clockStyleIndex: Int,
+    crossSizeScale: Float = 1.35f,
     is24Hour: Boolean,
     showBatteryBar: Boolean,
     iconStyle: IconStyle,
@@ -115,7 +119,6 @@ fun FreeFormWidgetsContainer(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val containerWidthPx = constraints.maxWidth.toFloat().coerceAtLeast(1f)
         val containerHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
-        val density = LocalDensity.current
 
         // Edit Mode Top Bar
         AnimatedVisibility(
@@ -191,7 +194,7 @@ fun FreeFormWidgetsContainer(
                                     onDrag = { change, dragAmount ->
                                         change.consume()
                                         currentXPercent = (currentXPercent + dragAmount.x / containerWidthPx).coerceIn(0.05f, 0.95f)
-                                        currentYPercent = (currentYPercent + dragAmount.y / containerHeightPx).coerceIn(0.08f, 0.92f)
+                                        currentYPercent = (currentYPercent + dragAmount.y / containerHeightPx).coerceIn(0.06f, 0.92f)
                                     },
                                     onDragEnd = {
                                         val updated = placedWidgets.map {
@@ -227,7 +230,8 @@ fun FreeFormWidgetsContainer(
 
                         HomeWidgetType.JESUS_CROSS -> {
                             DoubleBorderOrnateCrossWidget(
-                                styleIndex = crossStyleIndex
+                                styleIndex = crossStyleIndex,
+                                scaleMultiplier = crossSizeScale
                             )
                         }
 
@@ -334,10 +338,10 @@ fun FreeFormWidgetsContainer(
 
 /**
  * EXACT Hero Widget Matching the Reference Image:
- * Line 1: Accent Emerald Date (TUED SEP 01)
- * Line 2: Big Bold User Name (MICHEL)
- * Line 3: Digital Time (21:41)
- * Line 4: Battery Indicator (BAT 94%------)
+ * Line 1: Compact Accent Emerald Date (TUED SEP 01)
+ * Line 2: DOUBLE-LINED BOLD User Name (MICHEL) - 2-dot thick strokes!
+ * Line 3: Compact Small Digital Time (21:41)
+ * Line 4: Small Battery Indicator (BAT 94%------)
  */
 @Composable
 fun CombinedHeroDateNameTimeWidget(
@@ -366,33 +370,35 @@ fun CombinedHeroDateNameTimeWidget(
     val dateString = dateFormatter.format(currentTime).uppercase(Locale.US)
     val displayName = remember(userName) { userName.ifBlank { "MICHEL" }.uppercase() }
 
-    // Proportional dot matrix metrics matching the reference screenshot
-    val nameDotRadius = with(density) { 3.2.dp.toPx() }
-    val nameDotSpacing = with(density) { 8.5.dp.toPx() }
-    val nameCharSpacing = with(density) { 12.dp.toPx() }
+    // DOUBLE-LINED BOLD NAME METRICS (Large & 2-dot thick bold strokes!)
+    val nameDotRadius = with(density) { 2.4.dp.toPx() }
+    val nameDotSpacing = with(density) { 6.0.dp.toPx() }
+    val nameCharSpacing = with(density) { 8.0.dp.toPx() }
 
-    val timeDotRadius = with(density) { 2.6.dp.toPx() }
-    val timeDotSpacing = with(density) { 7.0.dp.toPx() }
-    val timeCharSpacing = with(density) { 10.dp.toPx() }
+    val nameWidth = calculateDoubleLinedTextWidth(displayName, nameDotSpacing, nameCharSpacing)
+    val nameHeight = calculateDoubleLinedTextHeight(nameDotRadius, nameDotSpacing)
 
-    val dateDotRadius = with(density) { 1.4.dp.toPx() }
-    val dateDotSpacing = with(density) { 4.0.dp.toPx() }
-    val dateCharSpacing = with(density) { 6.0.dp.toPx() }
-
-    val dateWidth = calculateDotMatrixTextWidth(dateString.length, dateDotRadius, dateDotSpacing, dateCharSpacing)
-    val dateHeight = calculateDotMatrixTextHeight(dateDotRadius, dateDotSpacing)
-
-    val nameWidth = calculateDotMatrixTextWidth(displayName.length, nameDotRadius, nameDotSpacing, nameCharSpacing)
-    val nameHeight = calculateDotMatrixTextHeight(nameDotRadius, nameDotSpacing)
+    // COMPACT SMALL TIME METRICS (Crisp & properly scaled)
+    val timeDotRadius = with(density) { 1.5.dp.toPx() }
+    val timeDotSpacing = with(density) { 4.0.dp.toPx() }
+    val timeCharSpacing = with(density) { 6.0.dp.toPx() }
 
     val timeWidth = calculateDotMatrixTextWidth(timeString.length, timeDotRadius, timeDotSpacing, timeCharSpacing)
     val timeHeight = calculateDotMatrixTextHeight(timeDotRadius, timeDotSpacing)
+
+    // COMPACT SMALL DATE METRICS
+    val dateDotRadius = with(density) { 1.0.dp.toPx() }
+    val dateDotSpacing = with(density) { 2.8.dp.toPx() }
+    val dateCharSpacing = with(density) { 4.2.dp.toPx() }
+
+    val dateWidth = calculateDotMatrixTextWidth(dateString.length, dateDotRadius, dateDotSpacing, dateCharSpacing)
+    val dateHeight = calculateDotMatrixTextHeight(dateDotRadius, dateDotSpacing)
 
     Column(
         modifier = modifier.padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Line 1: Date in accent color (e.g. Emerald Green as in image)
+        // Line 1: Small Compact Date in Accent Color (Emerald Green as in screenshot)
         Canvas(
             modifier = Modifier
                 .width(with(density) { dateWidth.toDp() })
@@ -409,28 +415,27 @@ fun CombinedHeroDateNameTimeWidget(
             )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Line 2: Big Bold User Name in White
+        // Line 2: DOUBLE-LINED BOLD User Name in Pure White (2-dot thick strokes)
         Canvas(
             modifier = Modifier
                 .width(with(density) { nameWidth.toDp() })
                 .height(with(density) { nameHeight.toDp() })
         ) {
-            drawDotMatrixText(
+            drawDoubleLinedText(
                 text = displayName,
                 topLeft = Offset.Zero,
                 dotRadius = nameDotRadius,
                 dotSpacing = nameDotSpacing,
                 charSpacing = nameCharSpacing,
-                activeColor = White,
-                inactiveColor = null
+                activeColor = White
             )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Line 3: Digital Time
+        // Line 3: Compact Small Digital Time
         Canvas(
             modifier = Modifier
                 .width(with(density) { timeWidth.toDp() })
@@ -447,13 +452,13 @@ fun CombinedHeroDateNameTimeWidget(
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-        // Line 4: BAT 94%------
+        // Line 4: Small Compact BAT 94%------
         val batText = "BAT ${batteryInfo.level}%"
         val batTextWidth = calculateDotMatrixTextWidth(batText.length, dateDotRadius, dateDotSpacing, dateCharSpacing)
-        val barDotRadius = with(density) { 1.3.dp.toPx() }
-        val barDotSpacing = with(density) { 5.5.dp.toPx() }
+        val barDotRadius = with(density) { 1.0.dp.toPx() }
+        val barDotSpacing = with(density) { 3.8.dp.toPx() }
         val totalBarDots = 6
         val activeBarDots = ((batteryInfo.level / 100f) * totalBarDots).toInt().coerceIn(1, totalBarDots)
         val barWidth = with(density) { ((totalBarDots - 1) * barDotSpacing + barDotRadius * 2).toDp() }
@@ -478,7 +483,7 @@ fun CombinedHeroDateNameTimeWidget(
                 )
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(5.dp))
 
             Canvas(
                 modifier = Modifier
@@ -492,7 +497,7 @@ fun CombinedHeroDateNameTimeWidget(
                     dotRadius = barDotRadius,
                     dotSpacing = barDotSpacing,
                     activeColor = TextSecondary,
-                    inactiveColor = Color(0xFF222222)
+                    inactiveColor = Color(0xFF1E1E1E)
                 )
             }
         }
@@ -500,7 +505,7 @@ fun CombinedHeroDateNameTimeWidget(
 }
 
 /**
- * 3 Separate Jesus Cross Designs:
+ * Large and Adjustable Jesus Cross Widget:
  * Style 0: Double-Bordered Outline Cross (Exact match to reference screenshot)
  * Style 1: Triple Golgotha Crosses
  * Style 2: Radiant Celtic Beaming Cross
@@ -508,16 +513,16 @@ fun CombinedHeroDateNameTimeWidget(
 @Composable
 fun DoubleBorderOrnateCrossWidget(
     styleIndex: Int = 0,
+    scaleMultiplier: Float = 1.35f,
     modifier: Modifier = Modifier
 ) {
-    val accent = LocalMatrixAccentColor.current
     val density = LocalDensity.current
 
     // Procedural Dot Matrix Cross Patterns
     val crossPattern = remember(styleIndex % 3) {
         when (styleIndex % 3) {
             0 -> arrayOf(
-                // Style 0: EXACT Double-Bordered Outline Cross from Image
+                // Style 0: Grand Double-Bordered Outline Cross (Exact match to image)
                 "0000001111111000000",
                 "0000001000001000000",
                 "0000001011101000000",
@@ -588,14 +593,18 @@ fun DoubleBorderOrnateCrossWidget(
     val gridRows = crossPattern.size
     val gridCols = crossPattern[0].length
 
-    val dotSpacing = with(density) { 5.6.dp.toPx() }
-    val dotRadius = with(density) { 1.8.dp.toPx() }
+    // Increased base size scaled by scaleMultiplier
+    val baseSpacingDp = 6.2f * scaleMultiplier.coerceIn(0.8f, 2.4f)
+    val baseRadiusDp = 2.0f * scaleMultiplier.coerceIn(0.8f, 2.4f)
+
+    val dotSpacing = with(density) { baseSpacingDp.dp.toPx() }
+    val dotRadius = with(density) { baseRadiusDp.dp.toPx() }
 
     val widgetWidth = with(density) { (gridCols * dotSpacing).toDp() }
     val widgetHeight = with(density) { (gridRows * dotSpacing).toDp() }
 
     Box(
-        modifier = modifier.padding(vertical = 4.dp),
+        modifier = modifier.padding(vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Canvas(
@@ -627,9 +636,9 @@ fun DoubleBorderOrnateCrossWidget(
 
 /**
  * 3 Separate Standalone Big Name Designs:
- * Style 0: Bold Monolith (Big bold glowing letters)
+ * Style 0: DOUBLE-LINED BOLD MONOLITH (2-dot thick strokes!)
  * Style 1: Framed LED Badge ([ NAME ])
- * Style 2: Cyber Flanked Line Name (--- NAME ---)
+ * Style 2: Cyber Flanked Line Name (— NAME —)
  */
 @Composable
 fun StandaloneNameWidget(
@@ -641,37 +650,60 @@ fun StandaloneNameWidget(
     val density = LocalDensity.current
     val rawName = name.ifBlank { "MICHEL" }.uppercase()
 
-    val formattedName = when (styleIndex % 3) {
-        1 -> "[ $rawName ]"
-        2 -> "— $rawName —"
-        else -> rawName
-    }
+    if (styleIndex % 3 == 0) {
+        // Style 0: DOUBLE-LINED BOLD
+        val nameDotRadius = with(density) { 3.0.dp.toPx() }
+        val nameDotSpacing = with(density) { 7.5.dp.toPx() }
+        val nameCharSpacing = with(density) { 10.0.dp.toPx() }
 
-    val dotRadius = with(density) { 3.4.dp.toPx() }
-    val dotSpacing = with(density) { 9.0.dp.toPx() }
-    val charSpacing = with(density) { 13.0.dp.toPx() }
+        val totalWidth = calculateDoubleLinedTextWidth(rawName, nameDotSpacing, nameCharSpacing)
+        val totalHeight = calculateDoubleLinedTextHeight(nameDotRadius, nameDotSpacing)
 
-    val totalWidth = calculateDotMatrixTextWidth(formattedName.length, dotRadius, dotSpacing, charSpacing)
-    val totalHeight = calculateDotMatrixTextHeight(dotRadius, dotSpacing)
+        Box(modifier = modifier.padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
+            Canvas(
+                modifier = Modifier
+                    .width(with(density) { totalWidth.toDp() })
+                    .height(with(density) { totalHeight.toDp() })
+            ) {
+                drawDoubleLinedText(
+                    text = rawName,
+                    topLeft = Offset.Zero,
+                    dotRadius = nameDotRadius,
+                    dotSpacing = nameDotSpacing,
+                    charSpacing = nameCharSpacing,
+                    activeColor = White
+                )
+            }
+        }
+    } else {
+        val formattedName = when (styleIndex % 3) {
+            1 -> "[ $rawName ]"
+            else -> "— $rawName —"
+        }
 
-    Box(
-        modifier = modifier.padding(vertical = 6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(
-            modifier = Modifier
-                .width(with(density) { totalWidth.toDp() })
-                .height(with(density) { totalHeight.toDp() })
-        ) {
-            drawDotMatrixText(
-                text = formattedName,
-                topLeft = Offset.Zero,
-                dotRadius = dotRadius,
-                dotSpacing = dotSpacing,
-                charSpacing = charSpacing,
-                activeColor = if (styleIndex % 3 == 1) accent.primaryColor else White,
-                inactiveColor = null
-            )
+        val dotRadius = with(density) { 3.2.dp.toPx() }
+        val dotSpacing = with(density) { 8.5.dp.toPx() }
+        val charSpacing = with(density) { 12.0.dp.toPx() }
+
+        val totalWidth = calculateDotMatrixTextWidth(formattedName.length, dotRadius, dotSpacing, charSpacing)
+        val totalHeight = calculateDotMatrixTextHeight(dotRadius, dotSpacing)
+
+        Box(modifier = modifier.padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
+            Canvas(
+                modifier = Modifier
+                    .width(with(density) { totalWidth.toDp() })
+                    .height(with(density) { totalHeight.toDp() })
+            ) {
+                drawDotMatrixText(
+                    text = formattedName,
+                    topLeft = Offset.Zero,
+                    dotRadius = dotRadius,
+                    dotSpacing = dotSpacing,
+                    charSpacing = charSpacing,
+                    activeColor = if (styleIndex % 3 == 1) accent.primaryColor else White,
+                    inactiveColor = null
+                )
+            }
         }
     }
 }
@@ -712,13 +744,13 @@ fun StandaloneClockWidget(
             )
         }
         1 -> {
-            // Style 1: Stacked 2-Line Big Clock (Hours on top, Minutes on bottom)
+            // Style 1: Stacked 2-Line Big Clock
             val hours = SimpleDateFormat(if (is24Hour) "HH" else "hh", Locale.US).format(currentTime)
             val minutes = SimpleDateFormat("mm", Locale.US).format(currentTime)
 
-            val sDotRadius = with(density) { 4.0.dp.toPx() }
-            val sDotSpacing = with(density) { 10.5.dp.toPx() }
-            val sCharSpacing = with(density) { 14.dp.toPx() }
+            val sDotRadius = with(density) { 3.5.dp.toPx() }
+            val sDotSpacing = with(density) { 9.0.dp.toPx() }
+            val sCharSpacing = with(density) { 12.dp.toPx() }
 
             val width = calculateDotMatrixTextWidth(2, sDotRadius, sDotSpacing, sCharSpacing)
             val height = calculateDotMatrixTextHeight(sDotRadius, sDotSpacing)
@@ -736,9 +768,9 @@ fun StandaloneClockWidget(
         else -> {
             // Style 2: Compact Retro Clock with Seconds
             val secTime = SimpleDateFormat(if (is24Hour) "HH:mm:ss" else "hh:mm:ss a", Locale.US).format(currentTime).uppercase()
-            val cDotRadius = with(density) { 2.0.dp.toPx() }
-            val cDotSpacing = with(density) { 5.5.dp.toPx() }
-            val cCharSpacing = with(density) { 8.dp.toPx() }
+            val cDotRadius = with(density) { 1.6.dp.toPx() }
+            val cDotSpacing = with(density) { 4.5.dp.toPx() }
+            val cCharSpacing = with(density) { 6.5.dp.toPx() }
 
             val cWidth = calculateDotMatrixTextWidth(secTime.length, cDotRadius, cDotSpacing, cCharSpacing)
             val cHeight = calculateDotMatrixTextHeight(cDotRadius, cDotSpacing)
