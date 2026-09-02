@@ -119,6 +119,11 @@ fun MatrixLauncherApp(
                             crossStyleIndex = uiState.settings.crossStyleIndex,
                             clockStyleIndex = uiState.settings.clockStyleIndex,
                             crossSizeScale = uiState.settings.crossSizeScale,
+                            nameSizeScale = uiState.settings.nameSizeScale,
+                            timeSizeScale = uiState.settings.timeSizeScale,
+                            dateSizeScale = uiState.settings.dateSizeScale,
+                            batterySizeScale = uiState.settings.batterySizeScale,
+                            bibleVerseIndex = uiState.settings.bibleVerseIndex,
                             iconStyle = uiState.settings.iconStyle,
                             dotShape = uiState.settings.dotShape,
                             placedWidgets = uiState.settings.placedWidgets,
@@ -144,6 +149,9 @@ fun MatrixLauncherApp(
                             },
                             onConfirmMindfulLaunch = {
                                 viewModel.onIntent(LauncherIntent.ConfirmMindfulLaunch)
+                            },
+                            onCycleBibleVerse = {
+                                viewModel.onIntent(LauncherIntent.CycleBibleVerse)
                             },
                             onSwipeUp = {
                                 viewModel.onIntent(LauncherIntent.PerformGestureAction(uiState.settings.swipeUpAction))
@@ -272,6 +280,18 @@ fun MatrixLauncherApp(
                             },
                             onCrossSizeScaleChange = { scale ->
                                 viewModel.onIntent(LauncherIntent.SetCrossSizeScale(scale))
+                            },
+                            onNameSizeScaleChange = { scale ->
+                                viewModel.onIntent(LauncherIntent.SetNameSizeScale(scale))
+                            },
+                            onTimeSizeScaleChange = { scale ->
+                                viewModel.onIntent(LauncherIntent.SetTimeSizeScale(scale))
+                            },
+                            onDateSizeScaleChange = { scale ->
+                                viewModel.onIntent(LauncherIntent.SetDateSizeScale(scale))
+                            },
+                            onBatterySizeScaleChange = { scale ->
+                                viewModel.onIntent(LauncherIntent.SetBatterySizeScale(scale))
                             },
                             onToggleBatterySaver = { enabled ->
                                 viewModel.onIntent(LauncherIntent.ToggleBatterySaver(enabled))

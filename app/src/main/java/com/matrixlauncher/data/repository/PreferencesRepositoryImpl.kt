@@ -43,7 +43,18 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun setNameStyleIndex(index: Int) = preferencesManager.setNameStyleIndex(index)
     override suspend fun setCrossStyleIndex(index: Int) = preferencesManager.setCrossStyleIndex(index)
     override suspend fun setClockStyleIndex(index: Int) = preferencesManager.setClockStyleIndex(index)
+
+    // Element Scales
     override suspend fun setCrossSizeScale(scale: Float) = preferencesManager.setCrossSizeScale(scale)
+    override suspend fun setNameSizeScale(scale: Float) = preferencesManager.setNameSizeScale(scale)
+    override suspend fun setTimeSizeScale(scale: Float) = preferencesManager.setTimeSizeScale(scale)
+    override suspend fun setDateSizeScale(scale: Float) = preferencesManager.setDateSizeScale(scale)
+    override suspend fun setBatterySizeScale(scale: Float) = preferencesManager.setBatterySizeScale(scale)
+
+    // Bible Verse
+    override suspend fun setBibleVerseIndex(index: Int) = preferencesManager.setBibleVerseIndex(index)
+    override suspend fun setCustomBibleVerse(verse: String) = preferencesManager.setCustomBibleVerse(verse)
+
     override suspend fun setBatterySaverEnabled(enabled: Boolean) = preferencesManager.setBatterySaverEnabled(enabled)
 
     override suspend fun setSearchProvider(provider: WebSearchProvider) = preferencesManager.setSearchProvider(provider)

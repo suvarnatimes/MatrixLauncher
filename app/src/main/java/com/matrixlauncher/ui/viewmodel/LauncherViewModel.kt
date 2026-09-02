@@ -105,7 +105,18 @@ class LauncherViewModel @Inject constructor(
             is LauncherIntent.SetNameStyleIndex -> setNameStyleIndex(intent.index)
             is LauncherIntent.SetCrossStyleIndex -> setCrossStyleIndex(intent.index)
             is LauncherIntent.SetClockStyleIndex -> setClockStyleIndex(intent.index)
+
+            // Scale Setters
             is LauncherIntent.SetCrossSizeScale -> setCrossSizeScale(intent.scale)
+            is LauncherIntent.SetNameSizeScale -> setNameSizeScale(intent.scale)
+            is LauncherIntent.SetTimeSizeScale -> setTimeSizeScale(intent.scale)
+            is LauncherIntent.SetDateSizeScale -> setDateSizeScale(intent.scale)
+            is LauncherIntent.SetBatterySizeScale -> setBatterySizeScale(intent.scale)
+
+            // Bible Verse
+            is LauncherIntent.CycleBibleVerse -> cycleBibleVerse()
+            is LauncherIntent.SetCustomBibleVerse -> setCustomBibleVerse(intent.verse)
+
             is LauncherIntent.ToggleBatterySaver -> toggleBatterySaver(intent.enabled)
 
             // Icon Customization Studio
@@ -222,7 +233,37 @@ class LauncherViewModel @Inject constructor(
     private fun setCrossSizeScale(scale: Float) = viewModelScope.launch {
         preferencesRepository.setCrossSizeScale(scale)
         emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
-        emitEffect(LauncherEffect.ShowToast("CROSS SIZE ADJUSTED"))
+    }
+
+    private fun setNameSizeScale(scale: Float) = viewModelScope.launch {
+        preferencesRepository.setNameSizeScale(scale)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+    }
+
+    private fun setTimeSizeScale(scale: Float) = viewModelScope.launch {
+        preferencesRepository.setTimeSizeScale(scale)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+    }
+
+    private fun setDateSizeScale(scale: Float) = viewModelScope.launch {
+        preferencesRepository.setDateSizeScale(scale)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+    }
+
+    private fun setBatterySizeScale(scale: Float) = viewModelScope.launch {
+        preferencesRepository.setBatterySizeScale(scale)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+    }
+
+    private fun cycleBibleVerse() = viewModelScope.launch {
+        val next = _uiState.value.settings.bibleVerseIndex + 1
+        preferencesRepository.setBibleVerseIndex(next)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
+    }
+
+    private fun setCustomBibleVerse(verse: String) = viewModelScope.launch {
+        preferencesRepository.setCustomBibleVerse(verse)
+        emitEffect(LauncherEffect.PerformHaptic(HapticFeedbackType.CLICK))
     }
 
     private fun toggleBatterySaver(enabled: Boolean) = viewModelScope.launch {

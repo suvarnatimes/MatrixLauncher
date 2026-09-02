@@ -86,7 +86,18 @@ sealed interface LauncherIntent {
     data class SetNameStyleIndex(val index: Int) : LauncherIntent
     data class SetCrossStyleIndex(val index: Int) : LauncherIntent
     data class SetClockStyleIndex(val index: Int) : LauncherIntent
+
+    // Scales for All Elements
     data class SetCrossSizeScale(val scale: Float) : LauncherIntent
+    data class SetNameSizeScale(val scale: Float) : LauncherIntent
+    data class SetTimeSizeScale(val scale: Float) : LauncherIntent
+    data class SetDateSizeScale(val scale: Float) : LauncherIntent
+    data class SetBatterySizeScale(val scale: Float) : LauncherIntent
+
+    // Bible Verse
+    data object CycleBibleVerse : LauncherIntent
+    data class SetCustomBibleVerse(val verse: String) : LauncherIntent
+
     data class ToggleBatterySaver(val enabled: Boolean) : LauncherIntent
 
     // Icon Customization Studio

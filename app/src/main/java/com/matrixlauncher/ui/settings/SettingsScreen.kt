@@ -101,6 +101,10 @@ fun SettingsScreen(
     onCrossStyleChange: (Int) -> Unit = {},
     onClockStyleChange: (Int) -> Unit = {},
     onCrossSizeScaleChange: (Float) -> Unit = {},
+    onNameSizeScaleChange: (Float) -> Unit = {},
+    onTimeSizeScaleChange: (Float) -> Unit = {},
+    onDateSizeScaleChange: (Float) -> Unit = {},
+    onBatterySizeScaleChange: (Float) -> Unit = {},
     onToggleBatterySaver: (Boolean) -> Unit = {},
     onOpenIconStudio: () -> Unit,
     onScrollerAlignmentChange: (ScrollerAlignment) -> Unit,
@@ -287,54 +291,6 @@ fun SettingsScreen(
                         onSelect = onCrossStyleChange
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Cross Size Adjuster Slider
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(SurfaceCard, RoundedCornerShape(6.dp))
-                            .padding(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "CROSS SIZE SCALE",
-                                color = TextPrimary,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${(settings.crossSizeScale * 100).toInt()}%",
-                                color = accent.primaryColor,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Text(
-                            text = "Adjust cross size from compact to grand imposing size",
-                            color = TextSecondary,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp
-                        )
-                        Slider(
-                            value = settings.crossSizeScale,
-                            onValueChange = onCrossSizeScaleChange,
-                            valueRange = 0.8f..2.2f,
-                            steps = 14,
-                            colors = SliderDefaults.colors(
-                                thumbColor = accent.primaryColor,
-                                activeTrackColor = accent.primaryColor,
-                                inactiveTrackColor = DarkSurface
-                            )
-                        )
-                    }
-
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // Standalone Name Design (3 styles)
@@ -358,7 +314,61 @@ fun SettingsScreen(
                     )
                 }
 
-                // Section 2: POWER & BATTERY SAVER MODE
+                // Section 2: ELEMENT SIZE ADJUSTERS (Scale Every Element)
+                item {
+                    SettingsSectionHeader(title = "ELEMENT SIZE SCALING (ALL WIDGETS)")
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Cross Size Slider
+                    SettingsScaleSlider(
+                        title = "JESUS CROSS SIZE",
+                        description = "Scales the cross from compact to grand imposing size",
+                        scale = settings.crossSizeScale,
+                        onScaleChange = onCrossSizeScaleChange
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Name Size Slider
+                    SettingsScaleSlider(
+                        title = "USER NAME SIZE",
+                        description = "Scales double-lined name font across Hero and Standalone widgets",
+                        scale = settings.nameSizeScale,
+                        onScaleChange = onNameSizeScaleChange
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Time Size Slider
+                    SettingsScaleSlider(
+                        title = "DIGITAL TIME SIZE",
+                        description = "Scales clock numbers across Hero and Clock widgets",
+                        scale = settings.timeSizeScale,
+                        onScaleChange = onTimeSizeScaleChange
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Date Size Slider
+                    SettingsScaleSlider(
+                        title = "DATE HEADER SIZE",
+                        description = "Scales header date text in the Hero widget",
+                        scale = settings.dateSizeScale,
+                        onScaleChange = onDateSizeScaleChange
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Battery Size Slider
+                    SettingsScaleSlider(
+                        title = "BATTERY INDICATOR SIZE",
+                        description = "Scales battery text and segmented dot gauge",
+                        scale = settings.batterySizeScale,
+                        onScaleChange = onBatterySizeScaleChange
+                    )
+                }
+
+                // Section 3: POWER & BATTERY SAVER MODE
                 item {
                     SettingsSectionHeader(title = "POWER & BATTERY OPTIMIZATION")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -371,7 +381,7 @@ fun SettingsScreen(
                     )
                 }
 
-                // Section 3: ICON STUDIO & ICON STYLES
+                // Section 4: ICON STUDIO & ICON STYLES
                 item {
                     SettingsSectionHeader(title = "APP ICONS & ICON STUDIO")
                     Spacer(modifier = Modifier.height(10.dp))
@@ -473,7 +483,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section 4: GESTURES & MULTI-TOUCH CONTROLS
+                // Section 5: GESTURES & MULTI-TOUCH CONTROLS
                 item {
                     SettingsSectionHeader(title = "GESTURES & MULTI-TOUCH CONTROLS")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -558,7 +568,7 @@ fun SettingsScreen(
                     )
                 }
 
-                // Section 5: THEME & COLOR PALETTE
+                // Section 6: THEME & COLOR PALETTE
                 item {
                     SettingsSectionHeader(title = "LED ACCENT COLOR")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -602,7 +612,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section 6: DOT GRID MATRIX CALIBRATION
+                // Section 7: DOT GRID MATRIX CALIBRATION
                 item {
                     SettingsSectionHeader(title = "BACKGROUND DOT GRID MATRIX")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -696,7 +706,7 @@ fun SettingsScreen(
                     )
                 }
 
-                // Section 7: GENERAL PREFERENCES
+                // Section 8: GENERAL PREFERENCES
                 item {
                     SettingsSectionHeader(title = "GENERAL PREFERENCES")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -723,7 +733,7 @@ fun SettingsScreen(
                     )
                 }
 
-                // Section 8: BACKUP & RESTORE
+                // Section 9: BACKUP & RESTORE
                 item {
                     SettingsSectionHeader(title = "BACKUP & RESTORE")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -849,6 +859,61 @@ fun SettingsScreen(
                 }
             )
         }
+    }
+}
+
+@Composable
+fun SettingsScaleSlider(
+    title: String,
+    description: String,
+    scale: Float,
+    onScaleChange: (Float) -> Unit
+) {
+    val accent = LocalMatrixAccentColor.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceCard, RoundedCornerShape(6.dp))
+            .padding(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "${(scale * 100).toInt()}%",
+                color = accent.primaryColor,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Text(
+            text = description,
+            color = TextSecondary,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp
+        )
+        Slider(
+            value = scale,
+            onValueChange = onScaleChange,
+            valueRange = 0.6f..2.2f,
+            steps = 15,
+            colors = SliderDefaults.colors(
+                thumbColor = accent.primaryColor,
+                activeTrackColor = accent.primaryColor,
+                inactiveTrackColor = DarkSurface
+            )
+        )
     }
 }
 

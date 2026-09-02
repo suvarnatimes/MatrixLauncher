@@ -42,6 +42,7 @@ enum class IconStyle(val label: String, val description: String) {
 enum class HomeWidgetType(val title: String, val description: String) {
     COMBINED_HERO("HERO CLOCK & NAME", "Date + Double-Lined Name + Time + Battery (as in screenshot)"),
     JESUS_CROSS("JESUS CROSS", "Double-bordered outline cross, triple crosses, or radiant Celtic cross"),
+    BIBLE_VERSE("BIBLE VERSE 3-BOX", "3-box layout: Double-lined Highlight Word + Verse + Citation"),
     CUSTOM_NAME("STANDALONE BIG NAME", "3 styles: Double-Lined Monolith, Framed Badge, or Cyber Flanked"),
     CLOCK("STANDALONE CLOCK", "3 styles: Classic Digital, Stacked 2-Line, or Compact"),
     WEATHER("LIVE WEATHER GLANCE", "Current temperature, LED condition, and humidity"),
@@ -140,7 +141,17 @@ data class LauncherSettings(
     val nameStyleIndex: Int = 0,
     val crossStyleIndex: Int = 0,
     val clockStyleIndex: Int = 0,
+
+    // Individual Size Scaling for All Elements
     val crossSizeScale: Float = 1.35f,
+    val nameSizeScale: Float = 1.0f,
+    val timeSizeScale: Float = 1.0f,
+    val dateSizeScale: Float = 1.0f,
+    val batterySizeScale: Float = 1.0f,
+
+    // Bible Verse Widget
+    val bibleVerseIndex: Int = 0,
+    val customBibleVerse: String = "",
 
     // Battery Saver
     val batterySaverEnabled: Boolean = false,

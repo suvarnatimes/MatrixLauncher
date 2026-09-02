@@ -63,9 +63,19 @@ class PreferencesManager @Inject constructor(
         val KEY_NAME_STYLE_INDEX = intPreferencesKey("name_style_index")
         val KEY_CROSS_STYLE_INDEX = intPreferencesKey("cross_style_index")
         val KEY_CLOCK_STYLE_INDEX = intPreferencesKey("clock_style_index")
-        val KEY_CROSS_SIZE_SCALE = floatPreferencesKey("cross_size_scale")
-        val KEY_BATTERY_SAVER = booleanPreferencesKey("battery_saver_enabled")
 
+        // Individual Scales
+        val KEY_CROSS_SIZE_SCALE = floatPreferencesKey("cross_size_scale")
+        val KEY_NAME_SIZE_SCALE = floatPreferencesKey("name_size_scale")
+        val KEY_TIME_SIZE_SCALE = floatPreferencesKey("time_size_scale")
+        val KEY_DATE_SIZE_SCALE = floatPreferencesKey("date_size_scale")
+        val KEY_BATTERY_SIZE_SCALE = floatPreferencesKey("battery_size_scale")
+
+        // Bible Verse
+        val KEY_BIBLE_VERSE_INDEX = intPreferencesKey("bible_verse_index")
+        val KEY_CUSTOM_BIBLE_VERSE = stringPreferencesKey("custom_bible_verse")
+
+        val KEY_BATTERY_SAVER = booleanPreferencesKey("battery_saver_enabled")
         val KEY_SEARCH_PROVIDER = stringPreferencesKey("search_provider")
         val KEY_24_HOUR_CLOCK = booleanPreferencesKey("is_24_hour_clock")
         val KEY_SCREEN_TIME_GLANCE = booleanPreferencesKey("show_screen_time")
@@ -167,6 +177,12 @@ class PreferencesManager @Inject constructor(
                 crossStyleIndex = prefs[PreferencesKeys.KEY_CROSS_STYLE_INDEX] ?: 0,
                 clockStyleIndex = prefs[PreferencesKeys.KEY_CLOCK_STYLE_INDEX] ?: 0,
                 crossSizeScale = prefs[PreferencesKeys.KEY_CROSS_SIZE_SCALE] ?: 1.35f,
+                nameSizeScale = prefs[PreferencesKeys.KEY_NAME_SIZE_SCALE] ?: 1.0f,
+                timeSizeScale = prefs[PreferencesKeys.KEY_TIME_SIZE_SCALE] ?: 1.0f,
+                dateSizeScale = prefs[PreferencesKeys.KEY_DATE_SIZE_SCALE] ?: 1.0f,
+                batterySizeScale = prefs[PreferencesKeys.KEY_BATTERY_SIZE_SCALE] ?: 1.0f,
+                bibleVerseIndex = prefs[PreferencesKeys.KEY_BIBLE_VERSE_INDEX] ?: 0,
+                customBibleVerse = prefs[PreferencesKeys.KEY_CUSTOM_BIBLE_VERSE] ?: "",
                 batterySaverEnabled = isBatterySaver,
                 defaultSearchProvider = provider,
                 is24HourClock = prefs[PreferencesKeys.KEY_24_HOUR_CLOCK] ?: true,
@@ -238,7 +254,18 @@ class PreferencesManager @Inject constructor(
     suspend fun setNameStyleIndex(index: Int) = edit { it[PreferencesKeys.KEY_NAME_STYLE_INDEX] = index }
     suspend fun setCrossStyleIndex(index: Int) = edit { it[PreferencesKeys.KEY_CROSS_STYLE_INDEX] = index }
     suspend fun setClockStyleIndex(index: Int) = edit { it[PreferencesKeys.KEY_CLOCK_STYLE_INDEX] = index }
-    suspend fun setCrossSizeScale(scale: Float) = edit { it[PreferencesKeys.KEY_CROSS_SIZE_SCALE] = scale.coerceIn(0.8f, 2.4f) }
+
+    // Scales
+    suspend fun setCrossSizeScale(scale: Float) = edit { it[PreferencesKeys.KEY_CROSS_SIZE_SCALE] = scale.coerceIn(0.6f, 2.4f) }
+    suspend fun setNameSizeScale(scale: Float) = edit { it[PreferencesKeys.KEY_NAME_SIZE_SCALE] = scale.coerceIn(0.6f, 2.4f) }
+    suspend fun setTimeSizeScale(scale: Float) = edit { it[PreferencesKeys.KEY_TIME_SIZE_SCALE] = scale.coerceIn(0.6f, 2.4f) }
+    suspend fun setDateSizeScale(scale: Float) = edit { it[PreferencesKeys.KEY_DATE_SIZE_SCALE] = scale.coerceIn(0.6f, 2.4f) }
+    suspend fun setBatterySizeScale(scale: Float) = edit { it[PreferencesKeys.KEY_BATTERY_SIZE_SCALE] = scale.coerceIn(0.6f, 2.4f) }
+
+    // Bible Verse
+    suspend fun setBibleVerseIndex(index: Int) = edit { it[PreferencesKeys.KEY_BIBLE_VERSE_INDEX] = index }
+    suspend fun setCustomBibleVerse(verse: String) = edit { it[PreferencesKeys.KEY_CUSTOM_BIBLE_VERSE] = verse }
+
     suspend fun setBatterySaverEnabled(enabled: Boolean) = edit { it[PreferencesKeys.KEY_BATTERY_SAVER] = enabled }
 
     suspend fun setSearchProvider(provider: WebSearchProvider) = edit { it[PreferencesKeys.KEY_SEARCH_PROVIDER] = provider.name }

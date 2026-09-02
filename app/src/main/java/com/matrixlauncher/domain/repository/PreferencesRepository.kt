@@ -34,7 +34,18 @@ interface PreferencesRepository {
     suspend fun setNameStyleIndex(index: Int)
     suspend fun setCrossStyleIndex(index: Int)
     suspend fun setClockStyleIndex(index: Int)
+
+    // Element Scales
     suspend fun setCrossSizeScale(scale: Float)
+    suspend fun setNameSizeScale(scale: Float)
+    suspend fun setTimeSizeScale(scale: Float)
+    suspend fun setDateSizeScale(scale: Float)
+    suspend fun setBatterySizeScale(scale: Float)
+
+    // Bible Verse
+    suspend fun setBibleVerseIndex(index: Int)
+    suspend fun setCustomBibleVerse(verse: String)
+
     suspend fun setBatterySaverEnabled(enabled: Boolean)
 
     suspend fun setSearchProvider(provider: WebSearchProvider)
